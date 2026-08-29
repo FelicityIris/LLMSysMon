@@ -1,0 +1,239 @@
+# ============================================================
+# LLMSysMon - Git Ignore
+# ============================================================
+
+
+# ============================================================
+# Gradle
+# ============================================================
+
+.gradle/
+build/
+
+# Keep Gradle Wrapper
+!gradle/wrapper/gradle-wrapper.jar
+
+# Ignore nested build directories
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+
+# ============================================================
+# Java / JVM
+# ============================================================
+
+*.class
+*.log
+
+# JVM crash dumps
+hs_err_pid*
+replay_pid*
+
+
+# ============================================================
+# IntelliJ IDEA
+# ============================================================
+
+.idea/
+
+# Keep shared project configuration if desired
+# Uncomment these if you want to commit them:
+# !.idea/codeStyles/
+# !.idea/inspectionProfiles/
+
+*.iws
+*.iml
+*.ipr
+
+out/
+
+
+# ============================================================
+# Eclipse
+# ============================================================
+
+.apt_generated/
+.classpath
+.factorypath
+.project
+.settings/
+.springBeans
+.sts4-cache/
+
+bin/
+
+
+# ============================================================
+# NetBeans
+# ============================================================
+
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+
+
+# ============================================================
+# VS Code
+# ============================================================
+
+.vscode/
+
+
+# ============================================================
+# Kotlin
+# ============================================================
+
+.kotlin/
+
+
+# ============================================================
+# Python
+# ============================================================
+
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Python packaging
+*.egg
+*.egg-info/
+dist/
+build/
+
+# Testing / coverage
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+
+# Type checkers / linters
+.mypy_cache/
+.pyright/
+.ruff_cache/
+
+
+# ============================================================
+# PyTorch / Machine Learning
+# ============================================================
+
+# Trained model files
+*.pt
+*.pth
+*.onnx
+
+# TensorBoard
+runs/
+tensorboard/
+
+# ML experiment outputs
+ml/experiments/*/outputs/
+ml/experiments/*/checkpoints/
+
+# Keep directory structure
+!ml/experiments/**/.gitkeep
+!ml/data/**/.gitkeep
+!ml/saved_models/**/.gitkeep
+
+
+# ============================================================
+# LLMSysMon Generated Data
+# ============================================================
+
+# Raw system-monitoring datasets
+data/raw/
+data/processed/
+
+# ML datasets
+ml/data/raw/
+ml/data/processed/
+ml/data/datasets/
+
+# Generated reports / experiment results
+ml/results/
+ml/outputs/
+
+
+# ============================================================
+# Database
+# ============================================================
+
+# Local SQLite databases
+*.db
+*.sqlite
+*.sqlite3
+
+# SQLite temporary files
+*.db-journal
+*.db-shm
+*.db-wal
+
+# Keep schema/migrations in Git
+!database/schema.sql
+!database/migrations/
+
+
+# ============================================================
+# Application Runtime Files
+# ============================================================
+
+# Local configuration
+.env
+.env.*
+!.env.example
+
+# Runtime logs
+logs/
+*.log
+
+# Temporary files
+tmp/
+temp/
+
+# PID files
+*.pid
+
+
+# ============================================================
+# Operating System
+# ============================================================
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+Desktop.ini
+
+# Linux
+*~
+.directory
+
+
+# ============================================================
+# Miscellaneous
+# ============================================================
+
+# Backup files
+*.bak
+*.tmp
+*.swp
+*.swo
+
+# Editor temporary files
+*.orig
+*.rej
