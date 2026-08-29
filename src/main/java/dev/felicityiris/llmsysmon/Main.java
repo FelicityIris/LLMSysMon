@@ -27,7 +27,25 @@ public class Main extends Application {
         MetricService metricService = new MetricService();
         for (int i = 0; i < 10; ++i) {
             SystemSnapshot snapshot = metricService.collectSnapshot();
-            System.out.println("CPU: " + snapshot.getCpu().getUsage() + "%");
+            System.out.printf(
+                    "CPU: U%% - %.2f%% CF - %d MF - %d nLP - %d nPP - %d | " +
+                    "RAM: T - %.2f A - %.2f U - %.2f U%% - %.2f%% | " +
+                    "SWAP: T - %.2f U - %.2f U%% - %.2f%%\n",
+                    snapshot.getCpu().getUsage(),
+                    snapshot.getCpu().getCurrentFrequency(),
+                    snapshot.getCpu().getMaxFrequency(),
+                    snapshot.getCpu().getLogicalProcessorCount(),
+                    snapshot.getCpu().getPhysicalProcessorCount(),
+
+                    (double) snapshot.getMemory().getTotalBytes() / (1024 * 1024 * 1024),
+                    (double) snapshot.getMemory().getAvailableBytes() / (1024 * 1024 * 1024),
+                    (double) snapshot.getMemory().getUsedBytes() / (1024 * 1024 * 1024),
+                    snapshot.getMemory().getUsage(),
+
+                    (double) snapshot.getMemory().getTotalSwapBytes() / (1024 * 1024 * 1024),
+                    (double) snapshot.getMemory().getUsedSwapBytes() / (1024 * 1024 * 1024),
+                    snapshot.getMemory().getSwapUsage()
+            );
             try {
                 Thread.sleep(1000);
             } catch (InterruptedException e) {
