@@ -1,5 +1,7 @@
 package dev.felicityiris.llmsysmon;
 
+import dev.felicityiris.llmsysmon.metrics.MetricService;
+import dev.felicityiris.llmsysmon.metrics.SystemSnapshot;
 import javafx.application.Application;
 import javafx.scene.Scene;
 import javafx.scene.control.Label;
@@ -21,6 +23,16 @@ public class Main extends Application {
     }
 
     public static void main(String[] args) {
-        launch();
+        //launch();
+        MetricService metricService = new MetricService();
+        for (int i = 0; i < 10; ++i) {
+            SystemSnapshot snapshot = metricService.collectSnapshot();
+            System.out.println("CPU: " + snapshot.getCpu().getUsage() + "%");
+            try {
+                Thread.sleep(1000);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        }
     }
 }
