@@ -178,8 +178,8 @@ ml/outputs/
 *.db-wal
 
 # Keep schema/migrations in Git
-!database/schema.sql
-!database/migrations/
+!src/main/resources/database/schema.sql
+!src/main/resources/database/migrations/
 
 
 # ============================================================
