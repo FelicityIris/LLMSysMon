@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.layout.VBox?>
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.layout.GridPane?>
+<VBox xmlns:fx="http://javafx.com/fxml"
+      fx:controller="dev.felicityiris.llmsysmon.ui.DashboardController"
+      spacing="20"
+      styleClass="root">
+    <padding>
+        <Insets top="25" right="25" bottom="25" left="25"/>
+    </padding>
+
+    <Label text="LLMSysMon" styleClass="title"/>
+
+    <GridPane hgap="40" vgap="15">
+        <Label text="CPU" GridPane.columnIndex="0" GridPane.rowIndex="0" styleClass="metric-name"/>
+        <Label fx:id="cpuValue" text="--" GridPane.columnIndex="1" GridPane.rowIndex="0" styleClass="metric-value"/>
+
+        <Label text="RAM" GridPane.columnIndex="0" GridPane.rowIndex="1" styleClass="metric-name"/>
+        <Label fx:id="memoryValue" text="--" GridPane.columnIndex="1" GridPane.rowIndex="1" styleClass="metric-value"/>
+
+        <Label text="Swap" GridPane.columnIndex="0" GridPane.rowIndex="2" styleClass="metric-name"/>
+        <Label fx:id="swapValue" text="--" GridPane.columnIndex="1" GridPane.rowIndex="2" styleClass="metric-value"/>
+    </GridPane>
+</VBox>
