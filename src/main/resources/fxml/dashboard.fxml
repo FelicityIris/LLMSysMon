@@ -4,6 +4,8 @@
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.layout.GridPane?>
+<?import javafx.scene.chart.LineChart?>
+<?import javafx.scene.chart.NumberAxis?>
 <VBox xmlns:fx="http://javafx.com/fxml"
       fx:controller="dev.felicityiris.llmsysmon.ui.DashboardController"
       spacing="20"
@@ -24,4 +26,46 @@
         <Label text="Swap" GridPane.columnIndex="0" GridPane.rowIndex="2" styleClass="metric-name"/>
         <Label fx:id="swapValue" text="--" GridPane.columnIndex="1" GridPane.rowIndex="2" styleClass="metric-value"/>
     </GridPane>
+
+    <VBox spacing="5">
+        <Label text="CPU Usage" styleClass="chart-title"/>
+
+        <LineChart fx:id="cpuChart">
+            <xAxis>
+                <NumberAxis label="Time (seconds ago)"/>
+            </xAxis>
+
+            <yAxis>
+                <NumberAxis label="Usage (%)"/>
+            </yAxis>
+        </LineChart>
+    </VBox>
+
+    <VBox spacing="5">
+        <Label text="Memory Usage" styleClass="chart-title"/>
+
+        <LineChart fx:id="memoryChart">
+            <xAxis>
+                <NumberAxis label="Time (seconds ago)"/>
+            </xAxis>
+
+            <yAxis>
+                <NumberAxis label="Usage (%)"/>
+            </yAxis>
+        </LineChart>
+    </VBox>
+
+    <VBox spacing="5">
+        <Label text="Swap Usage" styleClass="chart-title"/>
+
+        <LineChart fx:id="swapChart">
+            <xAxis>
+                <NumberAxis label="Time (seconds ago)"/>
+            </xAxis>
+
+            <yAxis>
+                <NumberAxis label="Usage (%)"/>
+            </yAxis>
+        </LineChart>
+    </VBox>
 </VBox>

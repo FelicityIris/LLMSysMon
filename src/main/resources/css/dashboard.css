@@ -18,3 +18,25 @@
     -fx-font-weight: bold;
     -fx-text-fill: white;
 }
+
+.chart-title {
+    -fx-font-size: 16px;
+    -fx-font-weight: bold;
+    -fx-text-fill: white;
+}
+
+.chart {
+    -fx-background-color: #202124;
+}
+
+.chart-plot-background {
+    -fx-background-color: #28292c;
+}
+
+.axis {
+    -fx-tick-label-fill: #b8b8b8;
+}
+
+.axis-label {
+    -fx-text-fill: #b8b8b8;
+}
