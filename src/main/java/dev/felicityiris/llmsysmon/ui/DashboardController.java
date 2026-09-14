@@ -4,6 +4,7 @@ import dev.felicityiris.llmsysmon.database.DatabaseConfig;
 import dev.felicityiris.llmsysmon.database.MetricRepository;
 import dev.felicityiris.llmsysmon.metrics.MetricService;
 import dev.felicityiris.llmsysmon.metrics.SystemSnapshot;
+import dev.felicityiris.llmsysmon.ml.DatasetExporter;
 import dev.felicityiris.llmsysmon.scheduler.MetricScheduler;
 import dev.felicityiris.llmsysmon.scheduler.SchedulerConfig;
 import javafx.application.Platform;
@@ -14,6 +15,8 @@ import javafx.scene.chart.XYChart;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 
+import java.io.IOException;
+import java.nio.file.Paths;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayDeque;
@@ -219,6 +222,16 @@ public class DashboardController {
         cpuChart.setAnimated(animated);
         memoryChart.setAnimated(animated);
         swapChart.setAnimated(animated);
+    }
+
+    public void exportDataset() {
+        DatasetExporter exporter = new DatasetExporter(metricRepository);
+
+        try {
+            exporter.exportAll(Paths.get("ml/data/system_metrics.csv"));
+        } catch (IOException e) {
+            System.err.println("Failed to export dataset: " + e.getMessage());
+        }
     }
 
     public void shutdown() {

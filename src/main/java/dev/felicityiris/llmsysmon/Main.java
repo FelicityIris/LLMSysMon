@@ -26,6 +26,8 @@ public class Main extends Application {
         stage.setWidth(1600);
         stage.setHeight(900);
         stage.show();
+
+        controller.exportDataset();
     }
 
     @Override
