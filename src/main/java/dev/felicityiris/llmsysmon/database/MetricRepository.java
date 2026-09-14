@@ -22,6 +22,12 @@ public class MetricRepository {
             entityManager.getTransaction().begin();
             entityManager.persist(MetricEntity.from(snapshot));
             entityManager.getTransaction().commit();
+        } catch (RuntimeException e) {
+            if (entityManager.getTransaction().isActive()) {
+                entityManager.getTransaction().rollback();
+            }
+
+            throw e;
         } finally {
             entityManager.close();
         }

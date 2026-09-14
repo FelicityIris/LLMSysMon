@@ -6,6 +6,8 @@
 <?import javafx.scene.layout.GridPane?>
 <?import javafx.scene.chart.LineChart?>
 <?import javafx.scene.chart.NumberAxis?>
+<?import javafx.scene.control.ComboBox?>
+
 <VBox xmlns:fx="http://javafx.com/fxml"
       fx:controller="dev.felicityiris.llmsysmon.ui.DashboardController"
       spacing="20"
@@ -15,6 +17,8 @@
     </padding>
 
     <Label text="LLMSysMon" styleClass="title"/>
+
+    <ComboBox fx:id="timeRangeSelector" prefWidth="150"/>
 
     <GridPane hgap="40" vgap="15">
         <Label text="CPU" GridPane.columnIndex="0" GridPane.rowIndex="0" styleClass="metric-name"/>
@@ -30,9 +34,9 @@
     <VBox spacing="5">
         <Label text="CPU Usage" styleClass="chart-title"/>
 
-        <LineChart fx:id="cpuChart">
+        <LineChart fx:id="cpuChart" prefHeight="250">
             <xAxis>
-                <NumberAxis label="Time (seconds ago)"/>
+                <NumberAxis label="Time"/>
             </xAxis>
 
             <yAxis>
@@ -44,9 +48,9 @@
     <VBox spacing="5">
         <Label text="Memory Usage" styleClass="chart-title"/>
 
-        <LineChart fx:id="memoryChart">
+        <LineChart fx:id="memoryChart" prefHeight="250">
             <xAxis>
-                <NumberAxis label="Time (seconds ago)"/>
+                <NumberAxis label="Time"/>
             </xAxis>
 
             <yAxis>
@@ -58,9 +62,9 @@
     <VBox spacing="5">
         <Label text="Swap Usage" styleClass="chart-title"/>
 
-        <LineChart fx:id="swapChart">
+        <LineChart fx:id="swapChart" prefHeight="250">
             <xAxis>
-                <NumberAxis label="Time (seconds ago)"/>
+                <NumberAxis label="Time"/>
             </xAxis>
 
             <yAxis>
