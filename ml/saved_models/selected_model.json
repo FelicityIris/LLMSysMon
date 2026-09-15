@@ -1,0 +1,15 @@
+{
+  "selected_model": "lstm",
+  "model_path": "ml/saved_models\\lstm.pt",
+  "reason": "LSTM achieved the lower average test RMSE (7.22% vs GRU: 7.68%) across unseen chronological telemetry.",
+  "metrics": {
+    "cpu_mae": 13.782967567443848,
+    "cpu_rmse": 17.876754760742188,
+    "ram_mae": 2.6362552642822266,
+    "ram_rmse": 2.951969861984253,
+    "swap_mae": 0.5931985974311829,
+    "swap_rmse": 0.8384094834327698,
+    "avg_mae": 5.670807143052419,
+    "avg_rmse": 7.222378035386403
+  }
+}

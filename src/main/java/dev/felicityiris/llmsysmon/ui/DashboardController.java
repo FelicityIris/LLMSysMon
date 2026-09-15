@@ -5,6 +5,9 @@ import dev.felicityiris.llmsysmon.database.MetricRepository;
 import dev.felicityiris.llmsysmon.metrics.MetricService;
 import dev.felicityiris.llmsysmon.metrics.SystemSnapshot;
 import dev.felicityiris.llmsysmon.ml.DatasetExporter;
+import dev.felicityiris.llmsysmon.ml.PredictionResult;
+import dev.felicityiris.llmsysmon.ml.PredictionService;
+import dev.felicityiris.llmsysmon.ml.RecommendationEngine;
 import dev.felicityiris.llmsysmon.scheduler.MetricScheduler;
 import dev.felicityiris.llmsysmon.scheduler.SchedulerConfig;
 import javafx.application.Platform;
@@ -26,7 +29,7 @@ import java.util.List;
 public class DashboardController {
     private static final int LIVE_HISTORY_SIZE = 60;
 
-    // ── Stat card labels (MD3 cards — ui branch) ─────────────────
+    // ── Stat card labels (MD3 cards) ─────────────────────────────
     @FXML private Label cpuValue;
     @FXML private Label cpuSubValue;      // "3.60 GHz  ·  16 cores"
 
@@ -39,13 +42,25 @@ public class DashboardController {
     @FXML private Label gpuValue;
     @FXML private Label gpuSubValue;      // "0.5 / 4.0 GB VRAM" | "N/A"
 
+    // ── AI Prediction Card labels ────────────────────────────────
+    @FXML private Label predictionModelBadge;
+    @FXML private Label predictionHorizonLabel;
+    @FXML private Label predictedCpuValue;
+    @FXML private Label currentCpuCompareLabel;
+    @FXML private Label predictedMemoryValue;
+    @FXML private Label currentMemoryCompareLabel;
+    @FXML private Label predictedSwapValue;
+    @FXML private Label currentSwapCompareLabel;
+    @FXML private Label recommendationSummary;
+    @FXML private Label recommendationDetail;
+
     // ── Charts ───────────────────────────────────────────────────
     @FXML private LineChart<Number, Number> cpuChart;
     @FXML private LineChart<Number, Number> memoryChart;
     @FXML private LineChart<Number, Number> swapChart;
     @FXML private LineChart<Number, Number> gpuChart;
 
-    // ── Time range selector (main branch) ────────────────────────
+    // ── Time range selector ──────────────────────────────────────
     @FXML private ComboBox<String> timeRangeSelector;
 
     // ── State ────────────────────────────────────────────────────
@@ -56,9 +71,11 @@ public class DashboardController {
     private XYChart.Series<Number, Number> swapSeries;
     private XYChart.Series<Number, Number> gpuSeries;
 
-    private MetricScheduler  scheduler;
-    private DatabaseConfig   databaseConfig;
-    private MetricRepository metricRepository;
+    private MetricScheduler   scheduler;
+    private DatabaseConfig    databaseConfig;
+    private MetricRepository  metricRepository;
+    private PredictionService predictionService;
+    private int               snapshotCounter = 0;
 
     // ── Lifecycle ─────────────────────────────────────────────────
 
@@ -74,14 +91,22 @@ public class DashboardController {
         databaseConfig   = new DatabaseConfig();
         metricRepository = new MetricRepository(databaseConfig.getEntityManagerFactory());
 
-        scheduler = new MetricScheduler(metricService, new SchedulerConfig(1000), this::handleSnapshot);
+        // Initialize ML Prediction & Recommendation service
+        predictionService = new PredictionService(metricRepository);
 
+        scheduler = new MetricScheduler(metricService, new SchedulerConfig(1000), this::handleSnapshot);
         scheduler.start();
+
+        // Trigger initial forecast check asynchronously
+        triggerPredictionAsync();
     }
 
     public void shutdown() {
         if (scheduler != null) {
             scheduler.stop();
+        }
+        if (predictionService != null) {
+            predictionService.shutdown();
         }
         if (databaseConfig != null) {
             databaseConfig.close();
@@ -168,6 +193,54 @@ public class DashboardController {
             addToLiveHistory(snapshot);
             updateLiveCharts();
         });
+
+        // Trigger ML inference periodically every 5 seconds
+        if (++snapshotCounter % 5 == 0) {
+            triggerPredictionAsync();
+        }
+    }
+
+    // ── Machine Learning Inference & Recommendations ─────────────
+
+    private void triggerPredictionAsync() {
+        if (predictionService != null) {
+            predictionService.runInferenceAsync().thenAccept(result -> {
+                Platform.runLater(() -> updatePredictionUI(result));
+            });
+        }
+    }
+
+    private void updatePredictionUI(PredictionResult result) {
+        if (result.available()) {
+            predictionModelBadge.setText(result.modelName() + " (Active)");
+            predictionHorizonLabel.setText(String.format("Horizon: ~%ds ahead", result.predictionHorizonSeconds()));
+
+            predictedCpuValue.setText(String.format("%.1f%%", result.predictedCpu()));
+            currentCpuCompareLabel.setText(String.format("(cur: %.1f%%)", result.currentCpu()));
+
+            predictedMemoryValue.setText(String.format("%.1f%%", result.predictedMemory()));
+            currentMemoryCompareLabel.setText(String.format("(cur: %.1f%%)", result.currentMemory()));
+
+            predictedSwapValue.setText(String.format("%.1f%%", result.predictedSwap()));
+            currentSwapCompareLabel.setText(String.format("(cur: %.1f%%)", result.currentSwap()));
+
+            if (result.recommendations() != null && !result.recommendations().isEmpty()) {
+                RecommendationEngine.Recommendation rec = result.recommendations().get(0);
+                recommendationSummary.setText(rec.summary());
+                recommendationDetail.setText(rec.detail());
+            }
+        } else {
+            predictionModelBadge.setText("STANDBY");
+            predictedCpuValue.setText("--");
+            currentCpuCompareLabel.setText("");
+            predictedMemoryValue.setText("--");
+            currentMemoryCompareLabel.setText("");
+            predictedSwapValue.setText("--");
+            currentSwapCompareLabel.setText("");
+
+            recommendationSummary.setText("AI Prediction Standby");
+            recommendationDetail.setText(result.statusMessage());
+        }
     }
 
     private void addToLiveHistory(SystemSnapshot snapshot) {
@@ -181,7 +254,7 @@ public class DashboardController {
         loadHistoricalData();
     }
 
-    // ── Historical data loading (main branch) ─────────────────────
+    // ── Historical data loading ───────────────────────────────────
 
     private void loadHistoricalData() {
         Duration duration = getSelectedDuration();
@@ -210,7 +283,6 @@ public class DashboardController {
             memorySeries.getData().add(new XYChart.Data<>(secondsAgo, snapshot.getMemory().getUsage()));
             swapSeries.getData().add(new XYChart.Data<>(secondsAgo, snapshot.getMemory().getSwapUsage()));
 
-            // GPU usage is nullable in older DB rows; skip those points
             if (snapshot.getGpu().isAvailable()) {
                 gpuSeries.getData().add(new XYChart.Data<>(secondsAgo, snapshot.getGpu().getUsage()));
             }
@@ -251,7 +323,7 @@ public class DashboardController {
         gpuChart.setAnimated(animated);
     }
 
-    // ── Dataset export (main branch) ─────────────────────────────
+    // ── Dataset export ───────────────────────────────────────────
 
     public void exportDataset() {
         DatasetExporter exporter = new DatasetExporter(metricRepository);

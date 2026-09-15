@@ -271,3 +271,87 @@
 .gpu-chart .default-color0.chart-line-symbol {
     -fx-background-color: #FFB74D;
 }
+
+/* ── AI Predictive Optimization Card ────────────────────────────── */
+.ai-card {
+    -fx-background-color: #252B31;
+    -fx-background-radius: 16px;
+    -fx-border-color: #38414A;
+    -fx-border-radius: 16px;
+    -fx-border-width: 1px;
+}
+
+.ai-card-title {
+    -fx-font-size: 15px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #E1E3E6;
+}
+
+.ai-badge {
+    -fx-background-color: #173244;
+    -fx-text-fill: #4FC3F7;
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+    -fx-background-radius: 6px;
+    -fx-padding: 3px 8px 3px 8px;
+}
+
+.ai-horizon-label {
+    -fx-font-size: 12px;
+    -fx-text-fill: #8B9198;
+}
+
+.ai-metric-box {
+    -fx-background-color: #1B2025;
+    -fx-background-radius: 10px;
+    -fx-border-color: #2F3740;
+    -fx-border-radius: 10px;
+    -fx-border-width: 1px;
+}
+
+.ai-metric-label {
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #C1C7CE;
+}
+
+.ai-pred-cpu {
+    -fx-font-size: 22px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #4FC3F7;
+}
+
+.ai-pred-ram {
+    -fx-font-size: 22px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #80CBC4;
+}
+
+.ai-pred-swap {
+    -fx-font-size: 22px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #CE93D8;
+}
+
+.ai-compare-label {
+    -fx-font-size: 12px;
+    -fx-text-fill: #8B9198;
+}
+
+.ai-recommendation-box {
+    -fx-background-color: #1A2228;
+    -fx-background-radius: 8px;
+    -fx-border-color: #4FC3F7;
+    -fx-border-width: 0px 0px 0px 3px;
+}
+
+.ai-rec-summary {
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #E1E3E6;
+}
+
+.ai-rec-detail {
+    -fx-font-size: 12px;
+    -fx-text-fill: #C1C7CE;
+}

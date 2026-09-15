@@ -1,0 +1,29 @@
+{
+  "selected_model": "lstm",
+  "selection_reason": "LSTM achieved the lower average test RMSE (7.22% vs GRU: 7.68%) across unseen chronological telemetry.",
+  "models": {
+    "gru": {
+      "cpu_mae": 13.564295768737793,
+      "cpu_rmse": 18.499914169311523,
+      "ram_mae": 2.4037742614746094,
+      "ram_rmse": 2.8675055503845215,
+      "swap_mae": 1.501634120941162,
+      "swap_rmse": 1.6784167289733887,
+      "avg_mae": 5.8232347170511884,
+      "avg_rmse": 7.6819454828898115
+    },
+    "lstm": {
+      "cpu_mae": 13.782967567443848,
+      "cpu_rmse": 17.876754760742188,
+      "ram_mae": 2.6362552642822266,
+      "ram_rmse": 2.951969861984253,
+      "swap_mae": 0.5931985974311829,
+      "swap_rmse": 0.8384094834327698,
+      "avg_mae": 5.670807143052419,
+      "avg_rmse": 7.222378035386403
+    }
+  },
+  "test_samples": 70,
+  "sequence_length": 30,
+  "prediction_horizon": 5
+}

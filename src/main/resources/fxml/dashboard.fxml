@@ -82,6 +82,59 @@
 
                 </HBox>
 
+                <!-- ── AI Predictive Optimization Card ───────────── -->
+                <VBox styleClass="ai-card" spacing="12">
+                    <padding><Insets top="16" right="20" bottom="16" left="20"/></padding>
+
+                    <!-- Header -->
+                    <HBox alignment="CENTER_LEFT" spacing="12">
+                        <Label text="AI Predictive Optimization" styleClass="ai-card-title"/>
+                        <Label fx:id="predictionModelBadge" text="MODEL STANDBY" styleClass="ai-badge"/>
+                        <Region HBox.hgrow="ALWAYS"/>
+                        <Label fx:id="predictionHorizonLabel" text="Horizon: ~5s ahead" styleClass="ai-horizon-label"/>
+                    </HBox>
+
+                    <!-- Predictions Row -->
+                    <HBox spacing="14" alignment="CENTER_LEFT">
+                        <!-- CPU Forecast -->
+                        <VBox styleClass="ai-metric-box" HBox.hgrow="ALWAYS" spacing="4">
+                            <padding><Insets top="10" right="12" bottom="10" left="12"/></padding>
+                            <Label text="CPU Prediction" styleClass="ai-metric-label"/>
+                            <HBox spacing="6" alignment="BASELINE_LEFT">
+                                <Label fx:id="predictedCpuValue" text="--" styleClass="ai-pred-cpu"/>
+                                <Label fx:id="currentCpuCompareLabel" text="" styleClass="ai-compare-label"/>
+                            </HBox>
+                        </VBox>
+
+                        <!-- RAM Forecast -->
+                        <VBox styleClass="ai-metric-box" HBox.hgrow="ALWAYS" spacing="4">
+                            <padding><Insets top="10" right="12" bottom="10" left="12"/></padding>
+                            <Label text="RAM Prediction" styleClass="ai-metric-label"/>
+                            <HBox spacing="6" alignment="BASELINE_LEFT">
+                                <Label fx:id="predictedMemoryValue" text="--" styleClass="ai-pred-ram"/>
+                                <Label fx:id="currentMemoryCompareLabel" text="" styleClass="ai-compare-label"/>
+                            </HBox>
+                        </VBox>
+
+                        <!-- Swap Forecast -->
+                        <VBox styleClass="ai-metric-box" HBox.hgrow="ALWAYS" spacing="4">
+                            <padding><Insets top="10" right="12" bottom="10" left="12"/></padding>
+                            <Label text="Swap Prediction" styleClass="ai-metric-label"/>
+                            <HBox spacing="6" alignment="BASELINE_LEFT">
+                                <Label fx:id="predictedSwapValue" text="--" styleClass="ai-pred-swap"/>
+                                <Label fx:id="currentSwapCompareLabel" text="" styleClass="ai-compare-label"/>
+                            </HBox>
+                        </VBox>
+                    </HBox>
+
+                    <!-- Recommendation Box -->
+                    <VBox styleClass="ai-recommendation-box" spacing="4">
+                        <padding><Insets top="8" right="12" bottom="8" left="12"/></padding>
+                        <Label fx:id="recommendationSummary" text="Analyzing system workload dynamics..." styleClass="ai-rec-summary"/>
+                        <Label fx:id="recommendationDetail" text="Predictive engine active. Workload suggestions will appear here." styleClass="ai-rec-detail"/>
+                    </VBox>
+                </VBox>
+
                 <!-- ── Section Header ───────────────────────────── -->
                 <Label text="Performance History" styleClass="section-header"/>
 
