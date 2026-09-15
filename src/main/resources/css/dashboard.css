@@ -12,6 +12,7 @@
    Primary (Cyan):          #4FC3F7   → CPU accent
    Secondary (Teal):        #80CBC4   → Memory accent
    Tertiary (Purple):       #CE93D8   → Swap accent
+   Custom (Amber):          #FFB74D   → GPU accent
    On Surface:              #E1E3E6   → Primary text
    On Surface Variant:      #C1C7CE   → Supporting text
    Outline:                 #8B9198   → Sub-stat, axis text
@@ -106,6 +107,11 @@
 /* Swap value — Tertiary Purple */
 #swapValue {
     -fx-text-fill: #CE93D8;
+}
+
+/* GPU value — Amber */
+#gpuValue {
+    -fx-text-fill: #FFB74D;
 }
 
 .stat-card-sub {
@@ -211,4 +217,13 @@
 }
 .swap-chart .default-color0.chart-line-symbol {
     -fx-background-color: #CE93D8;
+}
+
+/* GPU chart → Amber #FFB74D */
+.gpu-chart .default-color0.chart-series-line {
+    -fx-stroke: #FFB74D;
+    -fx-stroke-width: 2.5px;
+}
+.gpu-chart .default-color0.chart-line-symbol {
+    -fx-background-color: #FFB74D;
 }

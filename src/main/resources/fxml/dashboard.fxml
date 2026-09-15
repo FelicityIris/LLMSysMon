@@ -13,7 +13,7 @@
             fx:controller="dev.felicityiris.llmsysmon.ui.DashboardController"
             styleClass="root">
 
-    <!-- ── Top App Bar ─────────────────────────────────────── -->
+    <!-- ── Top App Bar ─────────────────────────────────────────── -->
     <top>
         <HBox styleClass="top-app-bar" alignment="CENTER_LEFT" spacing="16">
             <padding><Insets top="0" right="24" bottom="0" left="24"/></padding>
@@ -24,7 +24,7 @@
         </HBox>
     </top>
 
-    <!-- ── Main Content ────────────────────────────────────── -->
+    <!-- ── Main Content ────────────────────────────────────────── -->
     <center>
         <ScrollPane styleClass="content-scroll"
                     fitToWidth="true"
@@ -33,10 +33,10 @@
             <VBox spacing="16">
                 <padding><Insets top="24" right="24" bottom="24" left="24"/></padding>
 
-                <!-- Stat Cards Row -->
+                <!-- ── Stat Cards Row ───────────────────────────── -->
                 <HBox spacing="16">
 
-                    <!-- CPU Card -->
+                    <!-- CPU -->
                     <VBox styleClass="stat-card" HBox.hgrow="ALWAYS" spacing="6">
                         <padding><Insets top="20" right="20" bottom="20" left="20"/></padding>
                         <Label text="CPU" styleClass="stat-card-label"/>
@@ -44,7 +44,7 @@
                         <Label fx:id="cpuSubValue" text="--" styleClass="stat-card-sub"/>
                     </VBox>
 
-                    <!-- Memory Card -->
+                    <!-- Memory -->
                     <VBox styleClass="stat-card" HBox.hgrow="ALWAYS" spacing="6">
                         <padding><Insets top="20" right="20" bottom="20" left="20"/></padding>
                         <Label text="Memory" styleClass="stat-card-label"/>
@@ -52,7 +52,7 @@
                         <Label fx:id="memorySubValue" text="--" styleClass="stat-card-sub"/>
                     </VBox>
 
-                    <!-- Swap Card -->
+                    <!-- Swap -->
                     <VBox styleClass="stat-card" HBox.hgrow="ALWAYS" spacing="6">
                         <padding><Insets top="20" right="20" bottom="20" left="20"/></padding>
                         <Label text="Swap" styleClass="stat-card-label"/>
@@ -60,9 +60,17 @@
                         <Label fx:id="swapSubValue" text="--" styleClass="stat-card-sub"/>
                     </VBox>
 
+                    <!-- GPU -->
+                    <VBox styleClass="stat-card" HBox.hgrow="ALWAYS" spacing="6">
+                        <padding><Insets top="20" right="20" bottom="20" left="20"/></padding>
+                        <Label text="GPU" styleClass="stat-card-label"/>
+                        <Label fx:id="gpuValue" text="--" styleClass="stat-card-value"/>
+                        <Label fx:id="gpuSubValue" text="--" styleClass="stat-card-sub"/>
+                    </VBox>
+
                 </HBox>
 
-                <!-- Section Header -->
+                <!-- ── Section Header ───────────────────────────── -->
                 <Label text="Performance History" styleClass="section-header"/>
 
                 <!-- CPU Chart Card -->
@@ -90,6 +98,16 @@
                     <padding><Insets top="20" right="20" bottom="20" left="20"/></padding>
                     <Label text="Swap Usage" styleClass="chart-card-title"/>
                     <LineChart fx:id="swapChart" prefHeight="200" styleClass="swap-chart">
+                        <xAxis><NumberAxis label="Time (s)"/></xAxis>
+                        <yAxis><NumberAxis label="Usage (%)"/></yAxis>
+                    </LineChart>
+                </VBox>
+
+                <!-- GPU Chart Card -->
+                <VBox styleClass="chart-card" spacing="12">
+                    <padding><Insets top="20" right="20" bottom="20" left="20"/></padding>
+                    <Label text="GPU Usage" styleClass="chart-card-title"/>
+                    <LineChart fx:id="gpuChart" prefHeight="200" styleClass="gpu-chart">
                         <xAxis><NumberAxis label="Time (s)"/></xAxis>
                         <yAxis><NumberAxis label="Usage (%)"/></yAxis>
                     </LineChart>
