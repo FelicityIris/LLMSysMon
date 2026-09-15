@@ -38,7 +38,7 @@ def load_data(path: str) -> pd.DataFrame:
     if missing_cols:
         raise ValueError(f"Missing expected columns in {path}: {missing_cols}")
 
-    df["timestamp"] = pd.to_datetime(df["timestamp"], utc=True)
+    df["timestamp"] = pd.to_datetime(df["timestamp"], format="ISO8601", errors="coerce", utc=True)
     df = df.sort_values("timestamp").reset_index(drop=True)
     df = df.drop_duplicates(subset=["timestamp"]).reset_index(drop=True)
 
