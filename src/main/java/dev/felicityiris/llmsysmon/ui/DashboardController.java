@@ -19,41 +19,38 @@ import java.util.Deque;
 public class DashboardController {
     private static final int HISTORY_SIZE = 60;
 
-    @FXML
-    private Label cpuValue;
+    // ── Stat card labels ──────────────────────────────────────────
+    @FXML private Label cpuValue;
+    @FXML private Label cpuSubValue;      // e.g. "3.60 GHz · 16 cores"
 
-    @FXML
-    private Label memoryValue;
+    @FXML private Label memoryValue;
+    @FXML private Label memorySubValue;   // e.g. "11.2 / 31.8 GB"
 
-    @FXML
-    private Label swapValue;
+    @FXML private Label swapValue;
+    @FXML private Label swapSubValue;     // e.g. "0.5 / 4.0 GB" or "No swap configured"
 
-    @FXML
-    private LineChart<Number, Number> cpuChart;
+    // ── Charts ───────────────────────────────────────────────────
+    @FXML private LineChart<Number, Number> cpuChart;
+    @FXML private LineChart<Number, Number> memoryChart;
+    @FXML private LineChart<Number, Number> swapChart;
 
-    @FXML
-    private LineChart<Number, Number> memoryChart;
-
-    @FXML
-    private LineChart<Number, Number> swapChart;
-
-    private final Deque<Double> cpuHistory = new ArrayDeque<>();
+    // ── Rolling history (one entry per second, max 60) ───────────
+    private final Deque<Double> cpuHistory    = new ArrayDeque<>();
     private final Deque<Double> memoryHistory = new ArrayDeque<>();
-    private final Deque<Double> swapHistory = new ArrayDeque<>();
+    private final Deque<Double> swapHistory   = new ArrayDeque<>();
 
     private XYChart.Series<Number, Number> cpuSeries;
     private XYChart.Series<Number, Number> memorySeries;
     private XYChart.Series<Number, Number> swapSeries;
 
     private MetricScheduler scheduler;
-    private DatabaseConfig databaseConfig;
+    private DatabaseConfig   databaseConfig;
 
     public void initialize() {
         setupCharts();
 
-        MetricService metricService = new MetricService();
-
-        databaseConfig = new DatabaseConfig();
+        MetricService    metricService    = new MetricService();
+        databaseConfig                    = new DatabaseConfig();
         MetricRepository metricRepository = new MetricRepository(databaseConfig.getEntityManagerFactory());
 
         scheduler = new MetricScheduler(
@@ -65,14 +62,12 @@ public class DashboardController {
         scheduler.start();
     }
 
-    private void setupCharts() {
-        cpuSeries = new XYChart.Series<>();
-        memorySeries = new XYChart.Series<>();
-        swapSeries = new XYChart.Series<>();
+    // ── Chart setup ───────────────────────────────────────────────
 
-        cpuSeries.setName("CPU");
-        memorySeries.setName("RAM");
-        swapSeries.setName("Swap");
+    private void setupCharts() {
+        cpuSeries    = new XYChart.Series<>();
+        memorySeries = new XYChart.Series<>();
+        swapSeries   = new XYChart.Series<>();
 
         cpuChart.getData().add(cpuSeries);
         memoryChart.getData().add(memorySeries);
@@ -102,51 +97,76 @@ public class DashboardController {
         chart.setLegendVisible(false);
     }
 
+    // ── Snapshot handling ─────────────────────────────────────────
+
     private void handleSnapshot(SystemSnapshot snapshot, MetricRepository metricRepository) {
         metricRepository.save(snapshot);
 
-        double cpuUsage = snapshot.getCpu().getUsage();
+        // Usage percentages
+        double cpuUsage    = snapshot.getCpu().getUsage();
         double memoryUsage = snapshot.getMemory().getUsage();
-        double swapUsage = snapshot.getMemory().getSwapUsage();
+        double swapUsage   = snapshot.getMemory().getSwapUsage();
 
-        addToHistory(cpuHistory, cpuUsage);
+        addToHistory(cpuHistory,    cpuUsage);
         addToHistory(memoryHistory, memoryUsage);
-        addToHistory(swapHistory, swapUsage);
+        addToHistory(swapHistory,   swapUsage);
+
+        // CPU sub-stat: frequency + core count
+        double freqGHz   = snapshot.getCpu().getCurrentFrequency() / 1_000_000_000.0;
+        int logicalCores = snapshot.getCpu().getLogicalProcessorCount();
+
+        // Memory sub-stat: used / total in GB
+        double usedMemGB  = snapshot.getMemory().getUsedBytes()  / 1_073_741_824.0;
+        double totalMemGB = snapshot.getMemory().getTotalBytes() / 1_073_741_824.0;
+
+        // Swap sub-stat: used / total in GB (handles no-swap case)
+        double totalSwapGB = snapshot.getMemory().getTotalSwapBytes() / 1_073_741_824.0;
+        double usedSwapGB  = snapshot.getMemory().getUsedSwapBytes()  / 1_073_741_824.0;
+        String swapSub = (totalSwapGB == 0.0)
+                ? "No swap configured"
+                : String.format("%.1f / %.1f GB", usedSwapGB, totalSwapGB);
 
         Platform.runLater(() -> {
-            cpuValue.setText(String.format("%.2f%%", cpuUsage));
-            memoryValue.setText(String.format("%.2f%%", memoryUsage));
-            swapValue.setText(String.format("%.2f%%", swapUsage));
+            // Update stat card values
+            cpuValue.setText(String.format("%.1f%%", cpuUsage));
+            cpuSubValue.setText(String.format("%.2f GHz  ·  %d cores", freqGHz, logicalCores));
 
-            updateChart(cpuSeries, cpuHistory);
+            memoryValue.setText(String.format("%.1f%%", memoryUsage));
+            memorySubValue.setText(String.format("%.1f / %.1f GB", usedMemGB, totalMemGB));
+
+            swapValue.setText(String.format("%.1f%%", swapUsage));
+            swapSubValue.setText(swapSub);
+
+            // Update charts
+            updateChart(cpuSeries,    cpuHistory);
             updateChart(memorySeries, memoryHistory);
-            updateChart(swapSeries, swapHistory);
+            updateChart(swapSeries,   swapHistory);
         });
     }
+
+    // ── Helpers ───────────────────────────────────────────────────
 
     private void addToHistory(Deque<Double> history, double value) {
         if (history.size() >= HISTORY_SIZE) {
             history.removeFirst();
         }
-
         history.addLast(value);
     }
 
     private void updateChart(XYChart.Series<Number, Number> series, Deque<Double> history) {
         series.getData().clear();
-
         int index = 0;
-
         for (double value : history) {
             series.getData().add(new XYChart.Data<>(index++, value));
         }
     }
 
+    // ── Lifecycle ─────────────────────────────────────────────────
+
     public void shutdown() {
         if (scheduler != null) {
             scheduler.stop();
         }
-
         if (databaseConfig != null) {
             databaseConfig.close();
         }
