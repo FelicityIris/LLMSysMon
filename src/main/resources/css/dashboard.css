@@ -1,42 +1,273 @@
+/* ═══════════════════════════════════════════════════════════════
+   LLMSysMon — Material Design 3 Dark Theme
+   Seed color: Cyan-Blue  |  Scheme: Dark
+   ═══════════════════════════════════════════════════════════════
+   MD3 Color Tokens
+   ─────────────────────────────────────────────────────────────
+   Background:              #191C1E
+   Surface Container Low:   #21252A   → Top App Bar
+   Surface Container:       #262B31   → Stat Cards
+   Surface Container High:  #303539   → Chart Cards
+   Chart Plot Background:   #1E2226   → Chart inner area
+   Primary (Cyan):          #4FC3F7   → CPU accent
+   Secondary (Teal):        #80CBC4   → Memory accent
+   Tertiary (Purple):       #CE93D8   → Swap accent
+   Custom (Amber):          #FFB74D   → GPU accent
+   On Surface:              #E1E3E6   → Primary text
+   On Surface Variant:      #C1C7CE   → Supporting text
+   Outline:                 #8B9198   → Sub-stat, axis text
+   Outline Variant:         #41484F   → Grid lines, borders
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── Root / Window Background ──────────────────────────────────── */
 .root {
-    -fx-background-color: #202124;
+    -fx-background-color: #191C1E;
+    -fx-font-family: "Segoe UI", "Roboto", "Arial", sans-serif;
 }
 
-.title {
-    -fx-font-size: 28px;
+/* ── Top App Bar ────────────────────────────────────────────────── */
+.top-app-bar {
+    -fx-background-color: #21252A;
+    -fx-min-height: 64px;
+    -fx-pref-height: 64px;
+    -fx-max-height: 64px;
+}
+
+.app-title {
+    -fx-font-size: 22px;
     -fx-font-weight: bold;
-    -fx-text-fill: white;
+    -fx-text-fill: #E1E3E6;
 }
 
-.metric-name {
-    -fx-font-size: 18px;
-    -fx-text-fill: #b8b8b8;
+.app-subtitle {
+    -fx-font-size: 13px;
+    -fx-text-fill: #C1C7CE;
 }
 
-.metric-value {
-    -fx-font-size: 18px;
+/* ── Time Range Selector (ComboBox in top app bar) ──────────────── */
+.time-range-selector {
+    -fx-background-color: #303539;
+    -fx-background-radius: 8px;
+    -fx-border-color: #41484F;
+    -fx-border-radius: 8px;
+    -fx-border-width: 1px;
+    -fx-text-fill: #E1E3E6;
+    -fx-font-size: 13px;
+}
+
+.time-range-selector .arrow-button {
+    -fx-background-color: transparent;
+}
+
+.time-range-selector .arrow {
+    -fx-background-color: #C1C7CE;
+}
+
+.time-range-selector:focused {
+    -fx-border-color: #4FC3F7;
+}
+
+.time-range-selector .list-cell {
+    -fx-background-color: transparent;
+    -fx-text-fill: #E1E3E6;
+}
+
+.combo-box-popup .list-view {
+    -fx-background-color: #303539;
+    -fx-border-color: #41484F;
+    -fx-border-radius: 8px;
+    -fx-background-radius: 8px;
+}
+
+.combo-box-popup .list-view .list-cell:hover {
+    -fx-background-color: #41484F;
+}
+
+.combo-box-popup .list-view .list-cell:selected {
+    -fx-background-color: #262B31;
+    -fx-text-fill: #4FC3F7;
+}
+
+/* ── Scroll Pane ────────────────────────────────────────────────── */
+.content-scroll {
+    -fx-background-color: transparent;
+    -fx-background: #191C1E;
+    -fx-border-color: transparent;
+    -fx-padding: 0;
+}
+
+.content-scroll > .viewport {
+    -fx-background-color: transparent;
+}
+
+.content-scroll .scroll-bar:vertical {
+    -fx-background-color: transparent;
+    -fx-pref-width: 8px;
+}
+
+.content-scroll .scroll-bar:vertical .track {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+}
+
+.content-scroll .scroll-bar:vertical .thumb {
+    -fx-background-color: #41484F;
+    -fx-background-radius: 4px;
+}
+
+.content-scroll .scroll-bar:vertical .increment-button,
+.content-scroll .scroll-bar:vertical .decrement-button {
+    -fx-background-color: transparent;
+    -fx-pref-height: 0;
+    -fx-min-height: 0;
+    -fx-max-height: 0;
+}
+
+/* ── Stat Cards ──────────────────────────────────────────────────── */
+.stat-card {
+    -fx-background-color: #262B31;
+    -fx-background-radius: 28px;
+    -fx-border-radius: 28px;
+}
+
+.stat-card-label {
+    -fx-font-size: 14px;
     -fx-font-weight: bold;
-    -fx-text-fill: white;
+    -fx-text-fill: #C1C7CE;
 }
 
-.chart-title {
+/* Large display value — base style (CPU = Primary Cyan) */
+.stat-card-value {
+    -fx-font-size: 40px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #4FC3F7;
+}
+
+/* Memory value — Secondary Teal */
+#memoryValue {
+    -fx-text-fill: #80CBC4;
+}
+
+/* Swap value — Tertiary Purple */
+#swapValue {
+    -fx-text-fill: #CE93D8;
+}
+
+/* GPU value — Amber */
+#gpuValue {
+    -fx-text-fill: #FFB74D;
+}
+
+.stat-card-sub {
+    -fx-font-size: 13px;
+    -fx-text-fill: #8B9198;
+}
+
+/* ── Section Header ─────────────────────────────────────────────── */
+.section-header {
     -fx-font-size: 16px;
     -fx-font-weight: bold;
-    -fx-text-fill: white;
+    -fx-text-fill: #E1E3E6;
+    -fx-padding: 8px 0px 4px 0px;
 }
 
+/* ── Chart Cards ─────────────────────────────────────────────────── */
+.chart-card {
+    -fx-background-color: #303539;
+    -fx-background-radius: 16px;
+    -fx-border-radius: 16px;
+}
+
+.chart-card-title {
+    -fx-font-size: 15px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #E1E3E6;
+}
+
+/* ── Charts — Shared Styles ──────────────────────────────────────── */
 .chart {
-    -fx-background-color: #202124;
+    -fx-background-color: transparent;
+    -fx-padding: 4px 0px 0px 0px;
+}
+
+.chart-content {
+    -fx-padding: 0;
 }
 
 .chart-plot-background {
-    -fx-background-color: #28292c;
+    -fx-background-color: #1E2226;
+    -fx-background-radius: 8px;
+}
+
+.chart-title {
+    -fx-text-fill: #E1E3E6;
+    -fx-font-size: 14px;
+    visibility: hidden;
 }
 
 .axis {
-    -fx-tick-label-fill: #b8b8b8;
+    -fx-tick-label-fill: #8B9198;
+    -fx-minor-tick-visible: false;
 }
 
 .axis-label {
-    -fx-text-fill: #b8b8b8;
+    -fx-text-fill: #8B9198;
+    -fx-font-size: 12px;
+}
+
+.chart-horizontal-grid-lines {
+    -fx-stroke: #41484F;
+    -fx-stroke-width: 1px;
+    -fx-stroke-dash-array: 4 4;
+}
+
+.chart-vertical-grid-lines {
+    -fx-stroke: transparent;
+}
+
+.chart-horizontal-zero-line {
+    -fx-stroke: #8B9198;
+    -fx-stroke-width: 1px;
+}
+
+.chart-vertical-zero-line {
+    -fx-stroke: transparent;
+}
+
+/* ── Chart Line Colors ───────────────────────────────────────────── */
+
+/* CPU chart → Primary Cyan #4FC3F7 */
+.cpu-chart .default-color0.chart-series-line {
+    -fx-stroke: #4FC3F7;
+    -fx-stroke-width: 2.5px;
+}
+.cpu-chart .default-color0.chart-line-symbol {
+    -fx-background-color: #4FC3F7;
+}
+
+/* Memory chart → Secondary Teal #80CBC4 */
+.memory-chart .default-color0.chart-series-line {
+    -fx-stroke: #80CBC4;
+    -fx-stroke-width: 2.5px;
+}
+.memory-chart .default-color0.chart-line-symbol {
+    -fx-background-color: #80CBC4;
+}
+
+/* Swap chart → Tertiary Purple #CE93D8 */
+.swap-chart .default-color0.chart-series-line {
+    -fx-stroke: #CE93D8;
+    -fx-stroke-width: 2.5px;
+}
+.swap-chart .default-color0.chart-line-symbol {
+    -fx-background-color: #CE93D8;
+}
+
+/* GPU chart → Amber #FFB74D */
+.gpu-chart .default-color0.chart-series-line {
+    -fx-stroke: #FFB74D;
+    -fx-stroke-width: 2.5px;
+}
+.gpu-chart .default-color0.chart-line-symbol {
+    -fx-background-color: #FFB74D;
 }

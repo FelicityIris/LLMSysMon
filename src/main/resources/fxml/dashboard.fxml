@@ -1,75 +1,132 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.VBox?>
+<?import javafx.scene.layout.Region?>
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.Label?>
-<?import javafx.scene.layout.GridPane?>
+<?import javafx.scene.control.ComboBox?>
+<?import javafx.scene.control.ScrollPane?>
 <?import javafx.scene.chart.LineChart?>
 <?import javafx.scene.chart.NumberAxis?>
-<?import javafx.scene.control.ComboBox?>
 
-<VBox xmlns:fx="http://javafx.com/fxml"
-      fx:controller="dev.felicityiris.llmsysmon.ui.DashboardController"
-      spacing="20"
-      styleClass="root">
-    <padding>
-        <Insets top="25" right="25" bottom="25" left="25"/>
-    </padding>
+<BorderPane xmlns:fx="http://javafx.com/fxml"
+            fx:controller="dev.felicityiris.llmsysmon.ui.DashboardController"
+            styleClass="root">
 
-    <Label text="LLMSysMon" styleClass="title"/>
+    <!-- ── Top App Bar ─────────────────────────────────────────── -->
+    <top>
+        <HBox styleClass="top-app-bar" alignment="CENTER_LEFT" spacing="16">
+            <padding><Insets top="0" right="24" bottom="0" left="24"/></padding>
 
-    <ComboBox fx:id="timeRangeSelector" prefWidth="150"/>
+            <!-- Title block -->
+            <VBox spacing="2">
+                <Label text="LLMSysMon" styleClass="app-title"/>
+                <Label text="System Monitor · Live" styleClass="app-subtitle"/>
+            </VBox>
 
-    <GridPane hgap="40" vgap="15">
-        <Label text="CPU" GridPane.columnIndex="0" GridPane.rowIndex="0" styleClass="metric-name"/>
-        <Label fx:id="cpuValue" text="--" GridPane.columnIndex="1" GridPane.rowIndex="0" styleClass="metric-value"/>
+            <!-- Push time-range selector to the right -->
+            <Region HBox.hgrow="ALWAYS"/>
 
-        <Label text="RAM" GridPane.columnIndex="0" GridPane.rowIndex="1" styleClass="metric-name"/>
-        <Label fx:id="memoryValue" text="--" GridPane.columnIndex="1" GridPane.rowIndex="1" styleClass="metric-value"/>
+            <!-- Time range selector (from main branch) -->
+            <ComboBox fx:id="timeRangeSelector"
+                      styleClass="time-range-selector"
+                      prefWidth="150"/>
+        </HBox>
+    </top>
 
-        <Label text="Swap" GridPane.columnIndex="0" GridPane.rowIndex="2" styleClass="metric-name"/>
-        <Label fx:id="swapValue" text="--" GridPane.columnIndex="1" GridPane.rowIndex="2" styleClass="metric-value"/>
-    </GridPane>
+    <!-- ── Main Content ────────────────────────────────────────── -->
+    <center>
+        <ScrollPane styleClass="content-scroll"
+                    fitToWidth="true"
+                    hbarPolicy="NEVER"
+                    vbarPolicy="AS_NEEDED">
+            <VBox spacing="16">
+                <padding><Insets top="24" right="24" bottom="24" left="24"/></padding>
 
-    <VBox spacing="5">
-        <Label text="CPU Usage" styleClass="chart-title"/>
+                <!-- ── Stat Cards Row ───────────────────────────── -->
+                <HBox spacing="16">
 
-        <LineChart fx:id="cpuChart" prefHeight="250">
-            <xAxis>
-                <NumberAxis label="Time"/>
-            </xAxis>
+                    <!-- CPU -->
+                    <VBox styleClass="stat-card" HBox.hgrow="ALWAYS" spacing="6">
+                        <padding><Insets top="20" right="20" bottom="20" left="20"/></padding>
+                        <Label text="CPU" styleClass="stat-card-label"/>
+                        <Label fx:id="cpuValue" text="--" styleClass="stat-card-value"/>
+                        <Label fx:id="cpuSubValue" text="--" styleClass="stat-card-sub"/>
+                    </VBox>
 
-            <yAxis>
-                <NumberAxis label="Usage (%)"/>
-            </yAxis>
-        </LineChart>
-    </VBox>
+                    <!-- Memory -->
+                    <VBox styleClass="stat-card" HBox.hgrow="ALWAYS" spacing="6">
+                        <padding><Insets top="20" right="20" bottom="20" left="20"/></padding>
+                        <Label text="Memory" styleClass="stat-card-label"/>
+                        <Label fx:id="memoryValue" text="--" styleClass="stat-card-value"/>
+                        <Label fx:id="memorySubValue" text="--" styleClass="stat-card-sub"/>
+                    </VBox>
 
-    <VBox spacing="5">
-        <Label text="Memory Usage" styleClass="chart-title"/>
+                    <!-- Swap -->
+                    <VBox styleClass="stat-card" HBox.hgrow="ALWAYS" spacing="6">
+                        <padding><Insets top="20" right="20" bottom="20" left="20"/></padding>
+                        <Label text="Swap" styleClass="stat-card-label"/>
+                        <Label fx:id="swapValue" text="--" styleClass="stat-card-value"/>
+                        <Label fx:id="swapSubValue" text="--" styleClass="stat-card-sub"/>
+                    </VBox>
 
-        <LineChart fx:id="memoryChart" prefHeight="250">
-            <xAxis>
-                <NumberAxis label="Time"/>
-            </xAxis>
+                    <!-- GPU -->
+                    <VBox styleClass="stat-card" HBox.hgrow="ALWAYS" spacing="6">
+                        <padding><Insets top="20" right="20" bottom="20" left="20"/></padding>
+                        <Label text="GPU" styleClass="stat-card-label"/>
+                        <Label fx:id="gpuValue" text="--" styleClass="stat-card-value"/>
+                        <Label fx:id="gpuSubValue" text="--" styleClass="stat-card-sub"/>
+                    </VBox>
 
-            <yAxis>
-                <NumberAxis label="Usage (%)"/>
-            </yAxis>
-        </LineChart>
-    </VBox>
+                </HBox>
 
-    <VBox spacing="5">
-        <Label text="Swap Usage" styleClass="chart-title"/>
+                <!-- ── Section Header ───────────────────────────── -->
+                <Label text="Performance History" styleClass="section-header"/>
 
-        <LineChart fx:id="swapChart" prefHeight="250">
-            <xAxis>
-                <NumberAxis label="Time"/>
-            </xAxis>
+                <!-- CPU Chart Card -->
+                <VBox styleClass="chart-card" spacing="12">
+                    <padding><Insets top="20" right="20" bottom="20" left="20"/></padding>
+                    <Label text="CPU Usage" styleClass="chart-card-title"/>
+                    <LineChart fx:id="cpuChart" prefHeight="200" styleClass="cpu-chart">
+                        <xAxis><NumberAxis label="Time (s)"/></xAxis>
+                        <yAxis><NumberAxis label="Usage (%)"/></yAxis>
+                    </LineChart>
+                </VBox>
 
-            <yAxis>
-                <NumberAxis label="Usage (%)"/>
-            </yAxis>
-        </LineChart>
-    </VBox>
-</VBox>
+                <!-- Memory Chart Card -->
+                <VBox styleClass="chart-card" spacing="12">
+                    <padding><Insets top="20" right="20" bottom="20" left="20"/></padding>
+                    <Label text="Memory Usage" styleClass="chart-card-title"/>
+                    <LineChart fx:id="memoryChart" prefHeight="200" styleClass="memory-chart">
+                        <xAxis><NumberAxis label="Time (s)"/></xAxis>
+                        <yAxis><NumberAxis label="Usage (%)"/></yAxis>
+                    </LineChart>
+                </VBox>
+
+                <!-- Swap Chart Card -->
+                <VBox styleClass="chart-card" spacing="12">
+                    <padding><Insets top="20" right="20" bottom="20" left="20"/></padding>
+                    <Label text="Swap Usage" styleClass="chart-card-title"/>
+                    <LineChart fx:id="swapChart" prefHeight="200" styleClass="swap-chart">
+                        <xAxis><NumberAxis label="Time (s)"/></xAxis>
+                        <yAxis><NumberAxis label="Usage (%)"/></yAxis>
+                    </LineChart>
+                </VBox>
+
+                <!-- GPU Chart Card -->
+                <VBox styleClass="chart-card" spacing="12">
+                    <padding><Insets top="20" right="20" bottom="20" left="20"/></padding>
+                    <Label text="GPU Usage" styleClass="chart-card-title"/>
+                    <LineChart fx:id="gpuChart" prefHeight="200" styleClass="gpu-chart">
+                        <xAxis><NumberAxis label="Time (s)"/></xAxis>
+                        <yAxis><NumberAxis label="Usage (%)"/></yAxis>
+                    </LineChart>
+                </VBox>
+
+            </VBox>
+        </ScrollPane>
+    </center>
+
+</BorderPane>

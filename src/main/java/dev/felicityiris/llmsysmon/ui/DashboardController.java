@@ -26,36 +26,41 @@ import java.util.List;
 public class DashboardController {
     private static final int LIVE_HISTORY_SIZE = 60;
 
-    @FXML
-    private Label cpuValue;
+    // ── Stat card labels (MD3 cards — ui branch) ─────────────────
+    @FXML private Label cpuValue;
+    @FXML private Label cpuSubValue;      // "3.60 GHz  ·  16 cores"
 
-    @FXML
-    private Label memoryValue;
+    @FXML private Label memoryValue;
+    @FXML private Label memorySubValue;   // "11.2 / 31.8 GB"
 
-    @FXML
-    private Label swapValue;
+    @FXML private Label swapValue;
+    @FXML private Label swapSubValue;     // "0.5 / 4.0 GB" | "No swap configured"
 
-    @FXML
-    private LineChart<Number, Number> cpuChart;
+    @FXML private Label gpuValue;
+    @FXML private Label gpuSubValue;      // "0.5 / 4.0 GB VRAM" | "N/A"
 
-    @FXML
-    private LineChart<Number, Number> memoryChart;
+    // ── Charts ───────────────────────────────────────────────────
+    @FXML private LineChart<Number, Number> cpuChart;
+    @FXML private LineChart<Number, Number> memoryChart;
+    @FXML private LineChart<Number, Number> swapChart;
+    @FXML private LineChart<Number, Number> gpuChart;
 
-    @FXML
-    private LineChart<Number, Number> swapChart;
+    // ── Time range selector (main branch) ────────────────────────
+    @FXML private ComboBox<String> timeRangeSelector;
 
-    @FXML
-    private ComboBox<String> timeRangeSelector;
-
+    // ── State ────────────────────────────────────────────────────
     private final Deque<SystemSnapshot> liveHistory = new ArrayDeque<>();
 
     private XYChart.Series<Number, Number> cpuSeries;
     private XYChart.Series<Number, Number> memorySeries;
     private XYChart.Series<Number, Number> swapSeries;
+    private XYChart.Series<Number, Number> gpuSeries;
 
-    private MetricScheduler scheduler;
-    private DatabaseConfig databaseConfig;
+    private MetricScheduler  scheduler;
+    private DatabaseConfig   databaseConfig;
     private MetricRepository metricRepository;
+
+    // ── Lifecycle ─────────────────────────────────────────────────
 
     public void initialize() {
         setupCharts();
@@ -66,7 +71,7 @@ public class DashboardController {
 
         MetricService metricService = new MetricService();
 
-        databaseConfig = new DatabaseConfig();
+        databaseConfig   = new DatabaseConfig();
         metricRepository = new MetricRepository(databaseConfig.getEntityManagerFactory());
 
         scheduler = new MetricScheduler(metricService, new SchedulerConfig(1000), this::handleSnapshot);
@@ -74,22 +79,32 @@ public class DashboardController {
         scheduler.start();
     }
 
-    private void setupCharts() {
-        cpuSeries = new XYChart.Series<>();
-        memorySeries = new XYChart.Series<>();
-        swapSeries = new XYChart.Series<>();
+    public void shutdown() {
+        if (scheduler != null) {
+            scheduler.stop();
+        }
+        if (databaseConfig != null) {
+            databaseConfig.close();
+        }
+    }
 
-        cpuSeries.setName("CPU");
-        memorySeries.setName("RAM");
-        swapSeries.setName("Swap");
+    // ── Chart setup ───────────────────────────────────────────────
+
+    private void setupCharts() {
+        cpuSeries    = new XYChart.Series<>();
+        memorySeries = new XYChart.Series<>();
+        swapSeries   = new XYChart.Series<>();
+        gpuSeries    = new XYChart.Series<>();
 
         cpuChart.getData().add(cpuSeries);
         memoryChart.getData().add(memorySeries);
         swapChart.getData().add(swapSeries);
+        gpuChart.getData().add(gpuSeries);
 
         configureChart(cpuChart);
         configureChart(memoryChart);
         configureChart(swapChart);
+        configureChart(gpuChart);
     }
 
     private void configureChart(LineChart<Number, Number> chart) {
@@ -105,14 +120,51 @@ public class DashboardController {
         chart.setLegendVisible(false);
     }
 
+    // ── Snapshot handling ─────────────────────────────────────────
+
     private void handleSnapshot(SystemSnapshot snapshot) {
         metricRepository.save(snapshot);
 
-        Platform.runLater(() -> {
-            cpuValue.setText(String.format("%.2f%%", snapshot.getCpu().getUsage()));
-            memoryValue.setText(String.format("%.2f%%", snapshot.getMemory().getUsage()));
-            swapValue.setText(String.format("%.2f%%", snapshot.getMemory().getSwapUsage()));
+        // Derive display values
+        double cpuUsage    = snapshot.getCpu().getUsage();
+        double memoryUsage = snapshot.getMemory().getUsage();
+        double swapUsage   = snapshot.getMemory().getSwapUsage();
+        double gpuUsage    = snapshot.getGpu().getUsage();
 
+        double freqGHz   = snapshot.getCpu().getCurrentFrequency() / 1_000_000_000.0;
+        int logicalCores = snapshot.getCpu().getLogicalProcessorCount();
+
+        double usedMemGB  = snapshot.getMemory().getUsedBytes()  / 1_073_741_824.0;
+        double totalMemGB = snapshot.getMemory().getTotalBytes() / 1_073_741_824.0;
+
+        double totalSwapGB = snapshot.getMemory().getTotalSwapBytes() / 1_073_741_824.0;
+        double usedSwapGB  = snapshot.getMemory().getUsedSwapBytes()  / 1_073_741_824.0;
+        String swapSub = (totalSwapGB == 0.0)
+                ? "No swap configured"
+                : String.format("%.1f / %.1f GB", usedSwapGB, totalSwapGB);
+
+        boolean gpuAvailable = snapshot.getGpu().isAvailable();
+        long    vramUsedMB   = snapshot.getGpu().getVramUsedMB();
+        long    vramTotalMB  = snapshot.getGpu().getVramTotalMB();
+        String gpuSub = gpuAvailable
+                ? String.format("%.1f / %.1f GB VRAM", vramUsedMB / 1024.0, vramTotalMB / 1024.0)
+                : "N/A";
+
+        Platform.runLater(() -> {
+            // Stat card values
+            cpuValue.setText(String.format("%.1f%%", cpuUsage));
+            cpuSubValue.setText(String.format("%.2f GHz  ·  %d cores", freqGHz, logicalCores));
+
+            memoryValue.setText(String.format("%.1f%%", memoryUsage));
+            memorySubValue.setText(String.format("%.1f / %.1f GB", usedMemGB, totalMemGB));
+
+            swapValue.setText(String.format("%.1f%%", swapUsage));
+            swapSubValue.setText(swapSub);
+
+            gpuValue.setText(gpuAvailable ? String.format("%.1f%%", gpuUsage) : "N/A");
+            gpuSubValue.setText(gpuSub);
+
+            // Update charts via historical DB query
             addToLiveHistory(snapshot);
             updateLiveCharts();
         });
@@ -122,42 +174,19 @@ public class DashboardController {
         if (liveHistory.size() >= LIVE_HISTORY_SIZE) {
             liveHistory.removeFirst();
         }
-
         liveHistory.addLast(snapshot);
     }
 
     private void updateLiveCharts() {
-        Duration duration = getSelectedDuration();
-
         loadHistoricalData();
-        /*if (duration.toSeconds() <= 90) updateLiveChartsFromMemory();
-        else loadHistoricalData();*/
     }
 
-    private void updateLiveChartsFromMemory() {
-        Instant end = Instant.now();
-
-        cpuSeries.getData().clear();
-        memorySeries.getData().clear();
-        swapSeries.getData().clear();
-
-        for (SystemSnapshot snapshot : liveHistory) {
-            double secondsAgo = Duration.between(snapshot.getTimestamp(), end).toMillis() / -1000.0;
-
-            cpuSeries.getData().add(new XYChart.Data<>(secondsAgo, snapshot.getCpu().getUsage()));
-            memorySeries.getData().add(new XYChart.Data<>(secondsAgo, snapshot.getMemory().getUsage()));
-            swapSeries.getData().add(new XYChart.Data<>(secondsAgo, snapshot.getMemory().getSwapUsage()));
-        }
-
-        configureLiveXAxis(cpuChart);
-        configureLiveXAxis(memoryChart);
-        configureLiveXAxis(swapChart);
-    }
+    // ── Historical data loading (main branch) ─────────────────────
 
     private void loadHistoricalData() {
         Duration duration = getSelectedDuration();
 
-        Instant end = Instant.now();
+        Instant end   = Instant.now();
         Instant start = end.minus(duration);
 
         List<SystemSnapshot> snapshots = metricRepository.findBetween(start, end);
@@ -167,10 +196,12 @@ public class DashboardController {
         cpuSeries.getData().clear();
         memorySeries.getData().clear();
         swapSeries.getData().clear();
+        gpuSeries.getData().clear();
 
-        configureHistoricalXAxis(cpuChart, duration.getSeconds());
+        configureHistoricalXAxis(cpuChart,    duration.getSeconds());
         configureHistoricalXAxis(memoryChart, duration.getSeconds());
-        configureHistoricalXAxis(swapChart, duration.getSeconds());
+        configureHistoricalXAxis(swapChart,   duration.getSeconds());
+        configureHistoricalXAxis(gpuChart,    duration.getSeconds());
 
         for (SystemSnapshot snapshot : snapshots) {
             double secondsAgo = Duration.between(snapshot.getTimestamp(), end).toMillis() / -1000.0;
@@ -178,6 +209,11 @@ public class DashboardController {
             cpuSeries.getData().add(new XYChart.Data<>(secondsAgo, snapshot.getCpu().getUsage()));
             memorySeries.getData().add(new XYChart.Data<>(secondsAgo, snapshot.getMemory().getUsage()));
             swapSeries.getData().add(new XYChart.Data<>(secondsAgo, snapshot.getMemory().getSwapUsage()));
+
+            // GPU usage is nullable in older DB rows; skip those points
+            if (snapshot.getGpu().isAvailable()) {
+                gpuSeries.getData().add(new XYChart.Data<>(secondsAgo, snapshot.getGpu().getUsage()));
+            }
         }
 
         setChartsAnimated(true);
@@ -185,20 +221,11 @@ public class DashboardController {
 
     private Duration getSelectedDuration() {
         return switch (timeRangeSelector.getValue()) {
-            case "5 minutes" -> Duration.ofMinutes(5);
+            case "5 minutes"  -> Duration.ofMinutes(5);
             case "30 minutes" -> Duration.ofMinutes(30);
-            case  "1 hour" -> Duration.ofHours(1);
-            default -> Duration.ofMinutes(1);
+            case "1 hour"     -> Duration.ofHours(1);
+            default           -> Duration.ofMinutes(1);
         };
-    }
-
-    private void configureLiveXAxis(LineChart<Number, Number> chart) {
-        NumberAxis xAxis = (NumberAxis) chart.getXAxis();
-
-        xAxis.setAutoRanging(false);
-        xAxis.setLowerBound(-(LIVE_HISTORY_SIZE - 1));
-        xAxis.setUpperBound(0);
-        xAxis.setTickUnit(10);
     }
 
     private void configureHistoricalXAxis(LineChart<Number, Number> chart, double durationSeconds) {
@@ -211,10 +238,9 @@ public class DashboardController {
     }
 
     private double getTickUnit(double durationSeconds) {
-        if (durationSeconds <= 60) return 10;
-        if (durationSeconds <= 300) return 60;
+        if (durationSeconds <= 60)   return 10;
+        if (durationSeconds <= 300)  return 60;
         if (durationSeconds <= 1800) return 300;
-
         return 600;
     }
 
@@ -222,25 +248,17 @@ public class DashboardController {
         cpuChart.setAnimated(animated);
         memoryChart.setAnimated(animated);
         swapChart.setAnimated(animated);
+        gpuChart.setAnimated(animated);
     }
+
+    // ── Dataset export (main branch) ─────────────────────────────
 
     public void exportDataset() {
         DatasetExporter exporter = new DatasetExporter(metricRepository);
-
         try {
             exporter.exportAll(Paths.get("ml/data/system_metrics.csv"));
         } catch (IOException e) {
             System.err.println("Failed to export dataset: " + e.getMessage());
-        }
-    }
-
-    public void shutdown() {
-        if (scheduler != null) {
-            scheduler.stop();
-        }
-
-        if (databaseConfig != null) {
-            databaseConfig.close();
         }
     }
 }
