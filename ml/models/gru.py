@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 
 class GRUModel(nn.Module):
-    def __init__(self, input_size = 3, hidden_size = 64, num_layers = 2, output_size = 3):
+    def __init__(self, input_size = 4, hidden_size = 64, num_layers = 2, output_size = 4):
         super().__init__()
 
         self.gru = nn.GRU(

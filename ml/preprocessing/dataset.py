@@ -17,6 +17,7 @@ FEATURES: List[str] = [
     "cpu_usage",
     "memory_usage",
     "swap_usage",
+    "gpu_usage",
 ]
 
 MIN_REQUIRED_SAMPLES: int = 45  # e.g., 30 sequence + 5 horizon + 10 buffer
@@ -34,16 +35,19 @@ def load_data(path: str) -> pd.DataFrame:
     if df.empty:
         raise ValueError(f"Data file at {path} is empty.")
 
+    if "gpu_usage" not in df.columns:
+        df["gpu_usage"] = 0.0
+
     missing_cols = [col for col in ["timestamp"] + FEATURES if col not in df.columns]
     if missing_cols:
         raise ValueError(f"Missing expected columns in {path}: {missing_cols}")
 
     df["timestamp"] = pd.to_datetime(df["timestamp"], format="ISO8601", errors="coerce", utc=True)
+    df = df.dropna(subset=["timestamp"]).reset_index(drop=True)
     df = df.sort_values("timestamp").reset_index(drop=True)
     df = df.drop_duplicates(subset=["timestamp"]).reset_index(drop=True)
 
-    df[FEATURES] = df[FEATURES].apply(pd.to_numeric, errors="coerce")
-    df = df.dropna(subset=FEATURES).reset_index(drop=True)
+    df[FEATURES] = df[FEATURES].apply(pd.to_numeric, errors="coerce").fillna(0.0)
 
     return df
 

@@ -5,6 +5,7 @@ import dev.felicityiris.llmsysmon.database.MetricRepository;
 import dev.felicityiris.llmsysmon.metrics.MetricService;
 import dev.felicityiris.llmsysmon.metrics.SystemSnapshot;
 import dev.felicityiris.llmsysmon.ml.DatasetExporter;
+import dev.felicityiris.llmsysmon.ml.PredictionRecord;
 import dev.felicityiris.llmsysmon.ml.PredictionResult;
 import dev.felicityiris.llmsysmon.ml.PredictionService;
 import dev.felicityiris.llmsysmon.ml.RecommendationEngine;
@@ -28,6 +29,7 @@ import java.util.List;
 
 public class DashboardController {
     private static final int LIVE_HISTORY_SIZE = 60;
+    private static final int MAX_PREDICTION_HISTORY = 120;
 
     // ── Stat card labels (MD3 cards) ─────────────────────────────
     @FXML private Label cpuValue;
@@ -51,8 +53,11 @@ public class DashboardController {
     @FXML private Label currentMemoryCompareLabel;
     @FXML private Label predictedSwapValue;
     @FXML private Label currentSwapCompareLabel;
+    @FXML private Label predictedGpuValue;
+    @FXML private Label currentGpuCompareLabel;
     @FXML private Label recommendationSummary;
     @FXML private Label recommendationDetail;
+    @FXML private Label predictionAccuracyLabel;
 
     // ── Charts ───────────────────────────────────────────────────
     @FXML private LineChart<Number, Number> cpuChart;
@@ -65,17 +70,21 @@ public class DashboardController {
 
     // ── State ────────────────────────────────────────────────────
     private final Deque<SystemSnapshot> liveHistory = new ArrayDeque<>();
+    private final Deque<PredictionRecord> predictionHistory = new ArrayDeque<>();
 
     private XYChart.Series<Number, Number> cpuSeries;
+    private XYChart.Series<Number, Number> cpuPredSeries;
     private XYChart.Series<Number, Number> memorySeries;
+    private XYChart.Series<Number, Number> memoryPredSeries;
     private XYChart.Series<Number, Number> swapSeries;
+    private XYChart.Series<Number, Number> swapPredSeries;
     private XYChart.Series<Number, Number> gpuSeries;
+    private XYChart.Series<Number, Number> gpuPredSeries;
 
     private MetricScheduler   scheduler;
     private DatabaseConfig    databaseConfig;
     private MetricRepository  metricRepository;
     private PredictionService predictionService;
-    private int               snapshotCounter = 0;
 
     // ── Lifecycle ─────────────────────────────────────────────────
 
@@ -116,15 +125,30 @@ public class DashboardController {
     // ── Chart setup ───────────────────────────────────────────────
 
     private void setupCharts() {
-        cpuSeries    = new XYChart.Series<>();
-        memorySeries = new XYChart.Series<>();
-        swapSeries   = new XYChart.Series<>();
-        gpuSeries    = new XYChart.Series<>();
+        cpuSeries     = new XYChart.Series<>();
+        cpuSeries.setName("Actual");
+        cpuPredSeries = new XYChart.Series<>();
+        cpuPredSeries.setName("Predicted");
 
-        cpuChart.getData().add(cpuSeries);
-        memoryChart.getData().add(memorySeries);
-        swapChart.getData().add(swapSeries);
-        gpuChart.getData().add(gpuSeries);
+        memorySeries     = new XYChart.Series<>();
+        memorySeries.setName("Actual");
+        memoryPredSeries = new XYChart.Series<>();
+        memoryPredSeries.setName("Predicted");
+
+        swapSeries     = new XYChart.Series<>();
+        swapSeries.setName("Actual");
+        swapPredSeries = new XYChart.Series<>();
+        swapPredSeries.setName("Predicted");
+
+        gpuSeries     = new XYChart.Series<>();
+        gpuSeries.setName("Actual");
+        gpuPredSeries = new XYChart.Series<>();
+        gpuPredSeries.setName("Predicted");
+
+        cpuChart.getData().addAll(cpuSeries, cpuPredSeries);
+        memoryChart.getData().addAll(memorySeries, memoryPredSeries);
+        swapChart.getData().addAll(swapSeries, swapPredSeries);
+        gpuChart.getData().addAll(gpuSeries, gpuPredSeries);
 
         configureChart(cpuChart);
         configureChart(memoryChart);
@@ -142,7 +166,7 @@ public class DashboardController {
 
         chart.setAnimated(false);
         chart.setCreateSymbols(false);
-        chart.setLegendVisible(false);
+        chart.setLegendVisible(true);
     }
 
     // ── Snapshot handling ─────────────────────────────────────────
@@ -189,15 +213,16 @@ public class DashboardController {
             gpuValue.setText(gpuAvailable ? String.format("%.1f%%", gpuUsage) : "N/A");
             gpuSubValue.setText(gpuSub);
 
+            // Update live accuracy comparison against past prediction targeting current time
+            updateLiveAccuracy(snapshot);
+
             // Update charts via historical DB query
             addToLiveHistory(snapshot);
             updateLiveCharts();
         });
 
-        // Trigger ML inference periodically every 5 seconds
-        if (++snapshotCounter % 5 == 0) {
-            triggerPredictionAsync();
-        }
+        // Trigger ML inference on every 1-second tick (asynchronous, guarded by AtomicBoolean)
+        triggerPredictionAsync();
     }
 
     // ── Machine Learning Inference & Recommendations ─────────────
@@ -205,7 +230,9 @@ public class DashboardController {
     private void triggerPredictionAsync() {
         if (predictionService != null) {
             predictionService.runInferenceAsync().thenAccept(result -> {
-                Platform.runLater(() -> updatePredictionUI(result));
+                if (result != null) {
+                    Platform.runLater(() -> updatePredictionUI(result));
+                }
             });
         }
     }
@@ -224,10 +251,23 @@ public class DashboardController {
             predictedSwapValue.setText(String.format("%.1f%%", result.predictedSwap()));
             currentSwapCompareLabel.setText(String.format("(cur: %.1f%%)", result.currentSwap()));
 
+            if (predictedGpuValue != null) {
+                predictedGpuValue.setText(String.format("%.1f%%", result.predictedGpu()));
+            }
+            if (currentGpuCompareLabel != null) {
+                currentGpuCompareLabel.setText(String.format("(cur: %.1f%%)", result.currentGpu()));
+            }
+
             if (result.recommendations() != null && !result.recommendations().isEmpty()) {
                 RecommendationEngine.Recommendation rec = result.recommendations().get(0);
                 recommendationSummary.setText(rec.summary());
                 recommendationDetail.setText(rec.detail());
+            }
+
+            // Record in prediction history for chart alignment and accuracy verification
+            predictionHistory.addLast(PredictionRecord.from(result));
+            while (predictionHistory.size() > MAX_PREDICTION_HISTORY) {
+                predictionHistory.removeFirst();
             }
         } else {
             predictionModelBadge.setText("STANDBY");
@@ -237,9 +277,45 @@ public class DashboardController {
             currentMemoryCompareLabel.setText("");
             predictedSwapValue.setText("--");
             currentSwapCompareLabel.setText("");
+            if (predictedGpuValue != null) {
+                predictedGpuValue.setText("--");
+            }
+            if (currentGpuCompareLabel != null) {
+                currentGpuCompareLabel.setText("");
+            }
 
             recommendationSummary.setText("AI Prediction Standby");
             recommendationDetail.setText(result.statusMessage());
+        }
+    }
+
+    private void updateLiveAccuracy(SystemSnapshot currentSnapshot) {
+        if (predictionAccuracyLabel == null || predictionHistory.isEmpty()) {
+            return;
+        }
+        Instant now = currentSnapshot.getTimestamp();
+        PredictionRecord matched = null;
+        long minDiffMillis = Long.MAX_VALUE;
+
+        for (PredictionRecord record : predictionHistory) {
+            if (record.targetTimestamp() != null) {
+                long diff = Math.abs(Duration.between(record.targetTimestamp(), now).toMillis());
+                if (diff < minDiffMillis && diff <= 2000) { // within 2 seconds
+                    minDiffMillis = diff;
+                    matched = record;
+                }
+            }
+        }
+
+        if (matched != null) {
+            double cpuErr = Math.abs(currentSnapshot.getCpu().getUsage() - matched.predictedCpu());
+            double memErr = Math.abs(currentSnapshot.getMemory().getUsage() - matched.predictedMemory());
+            double gpuErr = Math.abs(currentSnapshot.getGpu().getUsage() - matched.predictedGpu());
+
+            predictionAccuracyLabel.setText(String.format(
+                    "Live Tracking Error (5s Horizon): CPU ±%.1f%% | RAM ±%.1f%% | GPU ±%.1f%%",
+                    cpuErr, memErr, gpuErr
+            ));
         }
     }
 
@@ -264,12 +340,14 @@ public class DashboardController {
 
         List<SystemSnapshot> snapshots = metricRepository.findBetween(start, end);
 
-        setChartsAnimated(false);
-
         cpuSeries.getData().clear();
+        cpuPredSeries.getData().clear();
         memorySeries.getData().clear();
+        memoryPredSeries.getData().clear();
         swapSeries.getData().clear();
+        swapPredSeries.getData().clear();
         gpuSeries.getData().clear();
+        gpuPredSeries.getData().clear();
 
         configureHistoricalXAxis(cpuChart,    duration.getSeconds());
         configureHistoricalXAxis(memoryChart, duration.getSeconds());
@@ -288,7 +366,19 @@ public class DashboardController {
             }
         }
 
-        setChartsAnimated(true);
+        // Plot past predictions aligned to their target timestamp
+        double windowSeconds = duration.getSeconds();
+        for (PredictionRecord pred : predictionHistory) {
+            if (pred.targetTimestamp() != null) {
+                double predSecondsAgo = Duration.between(pred.targetTimestamp(), end).toMillis() / -1000.0;
+                if (predSecondsAgo >= -windowSeconds && predSecondsAgo <= 0.0) {
+                    cpuPredSeries.getData().add(new XYChart.Data<>(predSecondsAgo, pred.predictedCpu()));
+                    memoryPredSeries.getData().add(new XYChart.Data<>(predSecondsAgo, pred.predictedMemory()));
+                    swapPredSeries.getData().add(new XYChart.Data<>(predSecondsAgo, pred.predictedSwap()));
+                    gpuPredSeries.getData().add(new XYChart.Data<>(predSecondsAgo, pred.predictedGpu()));
+                }
+            }
+        }
     }
 
     private Duration getSelectedDuration() {

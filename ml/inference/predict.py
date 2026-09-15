@@ -162,6 +162,8 @@ def predict_next(
     real_pred = scaler.inverse_transform(scaled_pred)[0]
     real_pred = np.clip(real_pred, 0.0, 100.0)
 
+    has_gpu = len(FEATURES) > 3 and len(latest_actual) > 3
+
     return {
         "status": "success",
         "model": resolved_name,
@@ -171,11 +173,13 @@ def predict_next(
             "cpu": round(float(latest_actual[0]), 2),
             "memory": round(float(latest_actual[1]), 2),
             "swap": round(float(latest_actual[2]), 2),
+            "gpu": round(float(latest_actual[3]), 2) if has_gpu else 0.0,
         },
         "predicted": {
             "cpu": round(float(real_pred[0]), 2),
             "memory": round(float(real_pred[1]), 2),
             "swap": round(float(real_pred[2]), 2),
+            "gpu": round(float(real_pred[3]), 2) if has_gpu else 0.0,
         },
     }
 
@@ -223,10 +227,12 @@ def main():
             print(f"  CPU:  {result['current']['cpu']:>5.1f}%")
             print(f"  RAM:  {result['current']['memory']:>5.1f}%")
             print(f"  Swap: {result['current']['swap']:>5.1f}%")
+            print(f"  GPU:  {result['current']['gpu']:>5.1f}%")
             print(f"\nPredicted (~{result['prediction_horizon_seconds']} seconds):")
             print(f"  CPU:  {result['predicted']['cpu']:>5.1f}%")
             print(f"  RAM:  {result['predicted']['memory']:>5.1f}%")
             print(f"  Swap: {result['predicted']['swap']:>5.1f}%")
+            print(f"  GPU:  {result['predicted']['gpu']:>5.1f}%")
 
     except Exception as e:
         if args.json:

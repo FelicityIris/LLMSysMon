@@ -8,23 +8,27 @@ import java.io.InputStreamReader;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.Instant;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * Service that orchestrates telemetry export, subprocess-based Python inference,
- * and passes the forecast to RecommendationEngine.
- * Designed to never crash or block the UI thread under any ML failure.
+ * Service that orchestrates telemetry export, non-blocking subprocess-based Python inference,
+ * and passes the 4-metric forecast (CPU, RAM, Swap, GPU) to the RecommendationEngine.
+ * Guarantees single-flight execution via AtomicBoolean to prevent process explosion during 1-second ticks.
  */
 public class PredictionService {
 
     private final MetricRepository metricRepository;
     private final DatasetExporter datasetExporter;
     private final ExecutorService executor;
+    private final AtomicBoolean isInferring = new AtomicBoolean(false);
     private String pythonExecutable;
 
     public PredictionService(MetricRepository metricRepository) {
@@ -38,11 +42,6 @@ public class PredictionService {
         this.pythonExecutable = resolvePythonPath();
     }
 
-    /**
-     * Resolves the Python executable to use:
-     * 1. Project-local virtual environment (.venv/Scripts/python.exe)
-     * 2. System PATH ("python")
-     */
     private static String resolvePythonPath() {
         Path venvPythonWindows = Paths.get(".venv", "Scripts", "python.exe");
         if (Files.exists(venvPythonWindows)) {
@@ -58,10 +57,22 @@ public class PredictionService {
     }
 
     /**
-     * Asynchronously executes telemetry export and ML inference.
+     * Asynchronously executes live telemetry export and ML inference.
+     * If an inference execution is currently in flight, returns null immediately to skip this tick.
      */
     public CompletableFuture<PredictionResult> runInferenceAsync() {
-        return CompletableFuture.supplyAsync(this::runInferenceSync, executor);
+        if (!isInferring.compareAndSet(false, true)) {
+            // Skip cycle if previous inference process is still actively computing
+            return CompletableFuture.completedFuture(null);
+        }
+
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                return runInferenceSync();
+            } finally {
+                isInferring.set(false);
+            }
+        }, executor);
     }
 
     /**
@@ -69,8 +80,9 @@ public class PredictionService {
      */
     public PredictionResult runInferenceSync() {
         try {
-            Path csvPath = Paths.get("ml", "data", "system_metrics.csv");
-            datasetExporter.exportAll(csvPath);
+            // Fast export of only the recent 35 samples for sub-50ms I/O
+            Path csvPath = Paths.get("ml", "data", "live_inference.csv");
+            datasetExporter.exportRecent(35, csvPath);
 
             if (!Files.exists(csvPath) || Files.size(csvPath) == 0) {
                 return PredictionResult.unavailable("Awaiting system telemetry collection...");
@@ -124,7 +136,7 @@ public class PredictionService {
     }
 
     /**
-     * Lightweight regex-based JSON parser to eliminate external JSON library requirements.
+     * Lightweight regex-based JSON parser extracting all 4 metrics and timestamps.
      */
     private PredictionResult parseInferenceJson(String json) {
         String model = extractField(json, "\"model\":\\s*\"([^\"]+)\"");
@@ -136,24 +148,40 @@ public class PredictionService {
             if (!hStr.isEmpty()) horizon = Integer.parseInt(hStr);
         } catch (Exception ignored) {}
 
-        double curCpu = extractDouble(json, "\"current\"[^{]*\\{[^}]*\"cpu\":\\s*([0-9.]+)");
-        double curMem = extractDouble(json, "\"current\"[^{]*\\{[^}]*\"memory\":\\s*([0-9.]+)");
-        double curSwap = extractDouble(json, "\"current\"[^{]*\\{[^}]*\"swap\":\\s*([0-9.]+)");
+        Instant predTime = Instant.now();
+        String timeStr = extractField(json, "\"timestamp\":\\s*\"([^\"]+)\"");
+        if (!timeStr.isEmpty()) {
+            try {
+                // Parse ISO-8601 string or fallback to Instant.now()
+                predTime = Instant.from(DateTimeFormatter.ISO_DATE_TIME.parse(timeStr.replace(" ", "T")));
+            } catch (Exception ignored) {
+                predTime = Instant.now();
+            }
+        }
+        Instant targetTime = predTime.plusSeconds(horizon);
 
-        double predCpu = extractDouble(json, "\"predicted\"[^{]*\\{[^}]*\"cpu\":\\s*([0-9.]+)");
-        double predMem = extractDouble(json, "\"predicted\"[^{]*\\{[^}]*\"memory\":\\s*([0-9.]+)");
+        double curCpu  = extractDouble(json, "\"current\"[^{]*\\{[^}]*\"cpu\":\\s*([0-9.]+)");
+        double curMem  = extractDouble(json, "\"current\"[^{]*\\{[^}]*\"memory\":\\s*([0-9.]+)");
+        double curSwap = extractDouble(json, "\"current\"[^{]*\\{[^}]*\"swap\":\\s*([0-9.]+)");
+        double curGpu  = extractDouble(json, "\"current\"[^{]*\\{[^}]*\"gpu\":\\s*([0-9.]+)");
+
+        double predCpu  = extractDouble(json, "\"predicted\"[^{]*\\{[^}]*\"cpu\":\\s*([0-9.]+)");
+        double predMem  = extractDouble(json, "\"predicted\"[^{]*\\{[^}]*\"memory\":\\s*([0-9.]+)");
         double predSwap = extractDouble(json, "\"predicted\"[^{]*\\{[^}]*\"swap\":\\s*([0-9.]+)");
+        double predGpu  = extractDouble(json, "\"predicted\"[^{]*\\{[^}]*\"gpu\":\\s*([0-9.]+)");
 
         List<RecommendationEngine.Recommendation> recs = RecommendationEngine.generate(
-                curCpu, predCpu, curMem, predMem, curSwap, predSwap
+                curCpu, predCpu, curMem, predMem, curSwap, predSwap, curGpu, predGpu
         );
 
         return new PredictionResult(
                 true,
                 model.toUpperCase(),
                 horizon,
-                curCpu, curMem, curSwap,
-                predCpu, predMem, predSwap,
+                predTime,
+                targetTime,
+                curCpu, curMem, curSwap, curGpu,
+                predCpu, predMem, predSwap, predGpu,
                 "Model: " + model.toUpperCase() + " (Active)",
                 recs
         );

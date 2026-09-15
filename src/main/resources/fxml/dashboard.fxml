@@ -125,6 +125,16 @@
                                 <Label fx:id="currentSwapCompareLabel" text="" styleClass="ai-compare-label"/>
                             </HBox>
                         </VBox>
+
+                        <!-- GPU Forecast -->
+                        <VBox styleClass="ai-metric-box" HBox.hgrow="ALWAYS" spacing="4">
+                            <padding><Insets top="10" right="12" bottom="10" left="12"/></padding>
+                            <Label text="GPU Prediction" styleClass="ai-metric-label"/>
+                            <HBox spacing="6" alignment="BASELINE_LEFT">
+                                <Label fx:id="predictedGpuValue" text="--" styleClass="ai-pred-gpu"/>
+                                <Label fx:id="currentGpuCompareLabel" text="" styleClass="ai-compare-label"/>
+                            </HBox>
+                        </VBox>
                     </HBox>
 
                     <!-- Recommendation Box -->
@@ -132,6 +142,7 @@
                         <padding><Insets top="8" right="12" bottom="8" left="12"/></padding>
                         <Label fx:id="recommendationSummary" text="Analyzing system workload dynamics..." styleClass="ai-rec-summary"/>
                         <Label fx:id="recommendationDetail" text="Predictive engine active. Workload suggestions will appear here." styleClass="ai-rec-detail"/>
+                        <Label fx:id="predictionAccuracyLabel" text="Target evaluation tracking active" styleClass="ai-accuracy-label"/>
                     </VBox>
                 </VBox>
 

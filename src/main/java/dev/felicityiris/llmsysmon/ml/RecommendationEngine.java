@@ -5,7 +5,7 @@ import java.util.List;
 
 /**
  * Heuristic recommendation engine that evaluates current and predicted resource metrics
- * to produce human-readable, non-destructive system optimization advice.
+ * (CPU, Memory, Swap, and GPU) to produce human-readable, non-destructive system optimization advice.
  */
 public class RecommendationEngine {
 
@@ -21,6 +21,10 @@ public class RecommendationEngine {
     private static final double SWAP_ACTIVE_THRESHOLD   = 10.0;
     private static final double SWAP_INCREASE_DELTA     = 5.0;
 
+    private static final double GPU_CRITICAL_THRESHOLD = 85.0;
+    private static final double GPU_HIGH_THRESHOLD     = 70.0;
+    private static final double GPU_SPIKE_DELTA        = 25.0;
+
     public record Recommendation(String summary, String detail, Severity severity) {}
 
     public enum Severity {
@@ -31,12 +35,24 @@ public class RecommendationEngine {
     }
 
     /**
-     * Generates recommendations based on current and ML-predicted metrics.
+     * Backward-compatible overload without GPU.
      */
     public static List<Recommendation> generate(
             double currentCpu, double predictedCpu,
             double currentMemory, double predictedMemory,
             double currentSwap, double predictedSwap
+    ) {
+        return generate(currentCpu, predictedCpu, currentMemory, predictedMemory, currentSwap, predictedSwap, 0.0, 0.0);
+    }
+
+    /**
+     * Generates recommendations based on current and ML-predicted metrics (including GPU).
+     */
+    public static List<Recommendation> generate(
+            double currentCpu, double predictedCpu,
+            double currentMemory, double predictedMemory,
+            double currentSwap, double predictedSwap,
+            double currentGpu, double predictedGpu
     ) {
         List<Recommendation> recommendations = new ArrayList<>();
 
@@ -85,11 +101,27 @@ public class RecommendationEngine {
             ));
         }
 
-        // 4. Default Optimal state
+        // 4. GPU Analysis
+        if (predictedGpu >= GPU_CRITICAL_THRESHOLD) {
+            recommendations.add(new Recommendation(
+                    "Critical GPU Demand Forecasted",
+                    String.format("GPU load is predicted to reach %.1f%%. Consider reducing rendering load or GPU compute batches.", predictedGpu),
+                    Severity.CRITICAL
+            ));
+        } else if (predictedGpu >= GPU_HIGH_THRESHOLD || (predictedGpu - currentGpu >= GPU_SPIKE_DELTA)) {
+            recommendations.add(new Recommendation(
+                    "Elevated GPU Activity Expected",
+                    String.format("GPU utilization is rising (current: %.1f%% → predicted: %.1f%%).", currentGpu, predictedGpu),
+                    Severity.WARNING
+            ));
+        }
+
+        // 5. Default Optimal state
         if (recommendations.isEmpty()) {
             recommendations.add(new Recommendation(
                     "System Resources Healthy",
-                    String.format("Resource levels are stable (CPU: %.1f%%, RAM: %.1f%%). No performance bottlenecks anticipated.", predictedCpu, predictedMemory),
+                    String.format("Resource levels are stable (CPU: %.1f%%, RAM: %.1f%%, GPU: %.1f%%). No performance bottlenecks anticipated.",
+                            predictedCpu, predictedMemory, predictedGpu),
                     Severity.OPTIMAL
             ));
         }

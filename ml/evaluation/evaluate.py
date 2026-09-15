@@ -1,9 +1,9 @@
 """
 Evaluation and model selection suite for LLMSysMon.
 Evaluates GRU and LSTM models on unseen chronological test data,
-calculates MAE and RMSE in real physical units (percentages),
+calculates MAE and RMSE in real physical units (percentages) for CPU, RAM, Swap, and GPU,
 saves evaluation metrics to JSON and CSV, generates visual plots,
-and selects the best performing model.
+and selects the best performing model based on test RMSE.
 """
 
 import argparse
@@ -34,10 +34,10 @@ def load_model(checkpoint_path: str, device: torch.device) -> Tuple[torch.nn.Mod
 
     checkpoint = torch.load(checkpoint_path, map_location=device, weights_only=False)
     model_type = checkpoint.get("model_type", "gru")
-    input_size = checkpoint.get("input_size", 3)
+    input_size = checkpoint.get("input_size", len(FEATURES))
     hidden_size = checkpoint.get("hidden_size", 64)
     num_layers = checkpoint.get("num_layers", 2)
-    output_size = checkpoint.get("output_size", 3)
+    output_size = checkpoint.get("output_size", len(FEATURES))
 
     if model_type == "gru":
         model = GRUModel(
@@ -70,7 +70,7 @@ def evaluate_model(
 ) -> Tuple[np.ndarray, np.ndarray, Dict[str, float]]:
     """
     Evaluates model on test sequences and computes MAE and RMSE
-    in ORIGINAL percentage units (unscaled).
+    in ORIGINAL percentage units (unscaled) for CPU, RAM, Swap, and GPU.
     """
     with torch.no_grad():
         x_tensor = torch.from_numpy(x_test).to(device)
@@ -83,10 +83,12 @@ def evaluate_model(
     # Clip to physical system limits [0, 100]
     real_preds = np.clip(real_preds, 0.0, 100.0)
 
-    # Feature indices: 0=CPU, 1=Memory, 2=Swap
+    # Feature indices: 0=CPU, 1=Memory, 2=Swap, 3=GPU
     cpu_pred, cpu_act = real_preds[:, 0], real_actuals[:, 0]
     mem_pred, mem_act = real_preds[:, 1], real_actuals[:, 1]
     swap_pred, swap_act = real_preds[:, 2], real_actuals[:, 2]
+    gpu_pred = real_preds[:, 3] if real_preds.shape[1] > 3 else np.zeros_like(cpu_pred)
+    gpu_act = real_actuals[:, 3] if real_actuals.shape[1] > 3 else np.zeros_like(cpu_act)
 
     metrics = {
         "cpu_mae": float(np.mean(np.abs(cpu_pred - cpu_act))),
@@ -95,13 +97,15 @@ def evaluate_model(
         "ram_rmse": float(np.sqrt(np.mean((mem_pred - mem_act) ** 2))),
         "swap_mae": float(np.mean(np.abs(swap_pred - swap_act))),
         "swap_rmse": float(np.sqrt(np.mean((swap_pred - swap_act) ** 2))),
+        "gpu_mae": float(np.mean(np.abs(gpu_pred - gpu_act))),
+        "gpu_rmse": float(np.sqrt(np.mean((gpu_pred - gpu_act) ** 2))),
     }
 
     metrics["avg_mae"] = float(
-        (metrics["cpu_mae"] + metrics["ram_mae"] + metrics["swap_mae"]) / 3.0
+        (metrics["cpu_mae"] + metrics["ram_mae"] + metrics["swap_mae"] + metrics["gpu_mae"]) / 4.0
     )
     metrics["avg_rmse"] = float(
-        (metrics["cpu_rmse"] + metrics["ram_rmse"] + metrics["swap_rmse"]) / 3.0
+        (metrics["cpu_rmse"] + metrics["ram_rmse"] + metrics["swap_rmse"] + metrics["gpu_rmse"]) / 4.0
     )
 
     return real_preds, real_actuals, metrics
@@ -116,9 +120,13 @@ def generate_plots(
     os.makedirs(output_dir, exist_ok=True)
     time_steps = np.arange(len(real_actuals))
 
-    metric_names = [("CPU Usage (%)", 0, "actual_vs_pred_cpu.png"),
-                    ("Memory Usage (%)", 1, "actual_vs_pred_memory.png"),
-                    ("Swap Usage (%)", 2, "actual_vs_pred_swap.png")]
+    metric_names = [
+        ("CPU Usage (%)", 0, "actual_vs_pred_cpu.png"),
+        ("Memory Usage (%)", 1, "actual_vs_pred_memory.png"),
+        ("Swap Usage (%)", 2, "actual_vs_pred_swap.png"),
+    ]
+    if real_actuals.shape[1] > 3:
+        metric_names.append(("GPU Usage (%)", 3, "actual_vs_pred_gpu.png"))
 
     # 1. Actual vs Predicted plots for each metric
     for title, col_idx, filename in metric_names:
@@ -150,31 +158,34 @@ def generate_plots(
         plt.close()
         print(f"Saved plot: {save_path}")
 
-    # 2. Overall Model Comparison Bar Chart
+    # 2. Overall Model Comparison Bar Chart (including GPU)
     if len(results) >= 2:
-        plt.figure(figsize=(9, 4.5), dpi=150)
         model_keys = list(results.keys())
-        x = np.arange(3)
+        has_gpu = "gpu_rmse" in results[model_keys[0]]["metrics"]
+        num_bars = 4 if has_gpu else 3
+        x = np.arange(num_bars)
         width = 0.35
 
-        metrics_cpu = [results[m]["metrics"]["cpu_rmse"] for m in model_keys]
-        metrics_ram = [results[m]["metrics"]["ram_rmse"] for m in model_keys]
-        metrics_swap = [results[m]["metrics"]["swap_rmse"] for m in model_keys]
+        def get_model_metric_vector(m):
+            vec = [
+                results[m]["metrics"]["cpu_rmse"],
+                results[m]["metrics"]["ram_rmse"],
+                results[m]["metrics"]["swap_rmse"],
+            ]
+            if has_gpu:
+                vec.append(results[m]["metrics"]["gpu_rmse"])
+            return vec
 
-        fig, ax = plt.subplots(figsize=(8, 4.5), dpi=150)
-        ax.bar(x - width/2, [results[model_keys[0]]["metrics"]["cpu_rmse"],
-                             results[model_keys[0]]["metrics"]["ram_rmse"],
-                             results[model_keys[0]]["metrics"]["swap_rmse"]],
+        fig, ax = plt.subplots(figsize=(9, 4.5), dpi=150)
+        ax.bar(x - width/2, get_model_metric_vector(model_keys[0]),
                width, label=f"{model_keys[0].upper()} RMSE", color="#FFB74D")
-        ax.bar(x + width/2, [results[model_keys[1]]["metrics"]["cpu_rmse"],
-                             results[model_keys[1]]["metrics"]["ram_rmse"],
-                             results[model_keys[1]]["metrics"]["swap_rmse"]],
+        ax.bar(x + width/2, get_model_metric_vector(model_keys[1]),
                width, label=f"{model_keys[1].upper()} RMSE", color="#81C784")
 
         ax.set_title("Model Error Comparison (Test Set RMSE)", fontsize=13, fontweight="bold")
         ax.set_ylabel("RMSE (% points)", fontsize=11)
         ax.set_xticks(x)
-        ax.set_xticklabels(["CPU", "RAM", "Swap"])
+        ax.set_xticklabels(["CPU", "RAM", "Swap", "GPU"] if has_gpu else ["CPU", "RAM", "Swap"])
         ax.legend()
         ax.grid(True, linestyle=":", alpha=0.6)
         plt.tight_layout()
@@ -186,7 +197,7 @@ def generate_plots(
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Evaluate GRU and LSTM models")
+    parser = argparse.ArgumentParser(description="Evaluate GRU and LSTM models with GPU telemetry")
     parser.add_argument(
         "--input",
         default="ml/data/system_metrics.csv",
@@ -218,7 +229,7 @@ def main():
     args = parser.parse_args()
 
     print("=" * 70)
-    print("LLMSysMon Model Evaluation & Selection Pipeline")
+    print("LLMSysMon Model Evaluation & Selection Pipeline (CPU, RAM, Swap, GPU)")
     print("=" * 70)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -265,9 +276,9 @@ def main():
         sys.exit(1)
 
     # Print clean comparison table
-    print("\n" + "=" * 90)
-    print(f"{'Model':<8} {'CPU MAE':<10} {'RAM MAE':<10} {'SWAP MAE':<10} {'CPU RMSE':<10} {'RAM RMSE':<10} {'SWAP RMSE':<10} {'AVG RMSE':<10}")
-    print("-" * 90)
+    print("\n" + "=" * 110)
+    print(f"{'Model':<8} {'CPU MAE':<10} {'RAM MAE':<10} {'SWAP MAE':<10} {'GPU MAE':<10} {'CPU RMSE':<10} {'RAM RMSE':<10} {'SWAP RMSE':<10} {'GPU RMSE':<10} {'AVG RMSE':<10}")
+    print("-" * 110)
 
     table_rows = []
     for name, data in eval_results.items():
@@ -277,9 +288,11 @@ def main():
             f"{m['cpu_mae']:>7.2f}%   "
             f"{m['ram_mae']:>7.2f}%   "
             f"{m['swap_mae']:>7.2f}%   "
+            f"{m['gpu_mae']:>7.2f}%   "
             f"{m['cpu_rmse']:>7.2f}%   "
             f"{m['ram_rmse']:>7.2f}%   "
             f"{m['swap_rmse']:>7.2f}%   "
+            f"{m['gpu_rmse']:>7.2f}%   "
             f"{m['avg_rmse']:>7.2f}%"
         )
         table_rows.append({
@@ -287,13 +300,15 @@ def main():
             "cpu_mae": round(m["cpu_mae"], 4),
             "ram_mae": round(m["ram_mae"], 4),
             "swap_mae": round(m["swap_mae"], 4),
+            "gpu_mae": round(m["gpu_mae"], 4),
             "cpu_rmse": round(m["cpu_rmse"], 4),
             "ram_rmse": round(m["ram_rmse"], 4),
             "swap_rmse": round(m["swap_rmse"], 4),
+            "gpu_rmse": round(m["gpu_rmse"], 4),
             "avg_mae": round(m["avg_mae"], 4),
             "avg_rmse": round(m["avg_rmse"], 4),
         })
-    print("=" * 90)
+    print("=" * 110)
 
     # Select the better model based on lowest overall test error
     best_model_name = min(eval_results.keys(), key=lambda k: eval_results[k]["metrics"]["avg_rmse"])

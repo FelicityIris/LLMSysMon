@@ -1,29 +1,33 @@
 {
-  "selected_model": "lstm",
-  "selection_reason": "LSTM achieved the lower average test RMSE (7.22% vs GRU: 7.68%) across unseen chronological telemetry.",
+  "selected_model": "gru",
+  "selection_reason": "GRU achieved the lower average test RMSE (2.34% vs LSTM: 4.03%) across unseen chronological telemetry.",
   "models": {
     "gru": {
-      "cpu_mae": 13.564295768737793,
-      "cpu_rmse": 18.499914169311523,
-      "ram_mae": 2.4037742614746094,
-      "ram_rmse": 2.8675055503845215,
-      "swap_mae": 1.501634120941162,
-      "swap_rmse": 1.6784167289733887,
-      "avg_mae": 5.8232347170511884,
-      "avg_rmse": 7.6819454828898115
+      "cpu_mae": 4.877527713775635,
+      "cpu_rmse": 6.638583660125732,
+      "ram_mae": 1.0220212936401367,
+      "ram_rmse": 1.5048969984054565,
+      "swap_mae": 0.3306959271430969,
+      "swap_rmse": 0.36123448610305786,
+      "gpu_mae": 0.5060444474220276,
+      "gpu_rmse": 0.8687322735786438,
+      "avg_mae": 1.684072345495224,
+      "avg_rmse": 2.3433618545532227
     },
     "lstm": {
-      "cpu_mae": 13.782967567443848,
-      "cpu_rmse": 17.876754760742188,
-      "ram_mae": 2.6362552642822266,
-      "ram_rmse": 2.951969861984253,
-      "swap_mae": 0.5931985974311829,
-      "swap_rmse": 0.8384094834327698,
-      "avg_mae": 5.670807143052419,
-      "avg_rmse": 7.222378035386403
+      "cpu_mae": 6.169402122497559,
+      "cpu_rmse": 8.292684555053711,
+      "ram_mae": 2.8238162994384766,
+      "ram_rmse": 3.1801533699035645,
+      "swap_mae": 0.2899295687675476,
+      "swap_rmse": 0.3150838613510132,
+      "gpu_mae": 4.243786811828613,
+      "gpu_rmse": 4.317046165466309,
+      "avg_mae": 3.381733700633049,
+      "avg_rmse": 4.026241987943649
     }
   },
-  "test_samples": 70,
+  "test_samples": 371,
   "sequence_length": 30,
   "prediction_horizon": 5
 }
