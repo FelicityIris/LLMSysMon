@@ -143,6 +143,8 @@
                         <Label fx:id="recommendationSummary" text="Analyzing system workload dynamics..." styleClass="ai-rec-summary"/>
                         <Label fx:id="recommendationDetail" text="Predictive engine active. Workload suggestions will appear here." styleClass="ai-rec-detail"/>
                         <Label fx:id="predictionAccuracyLabel" text="Target evaluation tracking active" styleClass="ai-accuracy-label"/>
+                        <Label fx:id="llmStatusLabel" text="⏳ LLM: Initializing..." styleClass="llm-status-label"/>
+                        <Label fx:id="llmLastUpdatedLabel" text="" styleClass="llm-updated-label"/>
                     </VBox>
                 </VBox>
 

@@ -5,6 +5,9 @@ import dev.felicityiris.llmsysmon.database.MetricRepository;
 import dev.felicityiris.llmsysmon.metrics.MetricService;
 import dev.felicityiris.llmsysmon.metrics.SystemSnapshot;
 import dev.felicityiris.llmsysmon.ml.DatasetExporter;
+import dev.felicityiris.llmsysmon.ml.LlmConfig;
+import dev.felicityiris.llmsysmon.ml.LlmRecommendation;
+import dev.felicityiris.llmsysmon.ml.LocalLlmRecommendationService;
 import dev.felicityiris.llmsysmon.ml.PredictionRecord;
 import dev.felicityiris.llmsysmon.ml.PredictionResult;
 import dev.felicityiris.llmsysmon.ml.PredictionService;
@@ -58,6 +61,8 @@ public class DashboardController {
     @FXML private Label recommendationSummary;
     @FXML private Label recommendationDetail;
     @FXML private Label predictionAccuracyLabel;
+    @FXML private Label llmStatusLabel;
+    @FXML private Label llmLastUpdatedLabel;
 
     // ── Charts ───────────────────────────────────────────────────
     @FXML private LineChart<Number, Number> cpuChart;
@@ -81,10 +86,14 @@ public class DashboardController {
     private XYChart.Series<Number, Number> gpuSeries;
     private XYChart.Series<Number, Number> gpuPredSeries;
 
-    private MetricScheduler   scheduler;
-    private DatabaseConfig    databaseConfig;
-    private MetricRepository  metricRepository;
-    private PredictionService predictionService;
+    private MetricScheduler                   scheduler;
+    private DatabaseConfig                    databaseConfig;
+    private MetricRepository                  metricRepository;
+    private PredictionService                 predictionService;
+    private LocalLlmRecommendationService     llmService;
+
+    /** Tracks the most recent prediction so we can pass it to the LLM service on each tick. */
+    private volatile PredictionResult         latestPredictionResult;
 
     // ── Lifecycle ─────────────────────────────────────────────────
 
@@ -103,6 +112,12 @@ public class DashboardController {
         // Initialize ML Prediction & Recommendation service
         predictionService = new PredictionService(metricRepository);
 
+        // Initialize local LLM recommendation service (Ollama, falls back to rule-engine)
+        llmService = new LocalLlmRecommendationService(LlmConfig.defaults());
+        llmService.setRecommendationListener(rec ->
+                Platform.runLater(() -> updateLlmRecommendationUI(rec)));
+        llmService.start();
+
         scheduler = new MetricScheduler(metricService, new SchedulerConfig(1000), this::handleSnapshot);
         scheduler.start();
 
@@ -113,6 +128,9 @@ public class DashboardController {
     public void shutdown() {
         if (scheduler != null) {
             scheduler.stop();
+        }
+        if (llmService != null) {
+            llmService.shutdown();
         }
         if (predictionService != null) {
             predictionService.shutdown();
@@ -219,10 +237,18 @@ public class DashboardController {
             // Update charts via historical DB query
             addToLiveHistory(snapshot);
             updateLiveCharts();
+
+            // Refresh the recommendation age indicator smoothly on every tick
+            refreshRecommendationTimestamp();
         });
 
         // Trigger ML inference on every 1-second tick (asynchronous, guarded by AtomicBoolean)
         triggerPredictionAsync();
+
+        // Submit snapshot to LLM service (non-blocking — queues for next refresh window)
+        if (llmService != null) {
+            llmService.submitForRecommendation(snapshot, latestPredictionResult);
+        }
     }
 
     // ── Machine Learning Inference & Recommendations ─────────────
@@ -238,6 +264,9 @@ public class DashboardController {
     }
 
     private void updatePredictionUI(PredictionResult result) {
+        // Cache so llmService can access it on every 1-second tick
+        latestPredictionResult = result;
+
         if (result.available()) {
             predictionModelBadge.setText(result.modelName() + " (Active)");
             predictionHorizonLabel.setText(String.format("Horizon: ~%ds ahead", result.predictionHorizonSeconds()));
@@ -256,12 +285,6 @@ public class DashboardController {
             }
             if (currentGpuCompareLabel != null) {
                 currentGpuCompareLabel.setText(String.format("(cur: %.1f%%)", result.currentGpu()));
-            }
-
-            if (result.recommendations() != null && !result.recommendations().isEmpty()) {
-                RecommendationEngine.Recommendation rec = result.recommendations().get(0);
-                recommendationSummary.setText(rec.summary());
-                recommendationDetail.setText(rec.detail());
             }
 
             // Record in prediction history for chart alignment and accuracy verification
@@ -284,8 +307,54 @@ public class DashboardController {
                 currentGpuCompareLabel.setText("");
             }
 
-            recommendationSummary.setText("AI Prediction Standby");
-            recommendationDetail.setText(result.statusMessage());
+            // Only update recommendation text if LLM hasn't taken over yet
+            if (llmService == null) {
+                recommendationSummary.setText("AI Prediction Standby");
+                recommendationDetail.setText(result.statusMessage());
+            }
+        }
+    }
+
+    /**
+     * Updates the recommendation card with the latest LLM (or fallback) recommendation.
+     * Must be called on the JavaFX Application Thread.
+     */
+    private void updateLlmRecommendationUI(LlmRecommendation rec) {
+        RecommendationEngine.Recommendation engineRec = rec.toEngineRecommendation();
+        if (recommendationSummary != null && !engineRec.summary().equals(recommendationSummary.getText())) {
+            recommendationSummary.setText(engineRec.summary());
+        }
+        if (recommendationDetail != null && !engineRec.detail().equals(recommendationDetail.getText())) {
+            recommendationDetail.setText(engineRec.detail());
+        }
+
+        if (llmStatusLabel != null) {
+            String statusText = switch (rec.getSource()) {
+                case LLM      -> "🤖 LLM Active (" + rec.getSeverity().name() + ")";
+                case FALLBACK -> "📋 Rules Fallback";
+                case PENDING  -> "⏳ LLM: Initializing...";
+            };
+            if (!statusText.equals(llmStatusLabel.getText())) {
+                llmStatusLabel.setText(statusText);
+            }
+        }
+
+        refreshRecommendationTimestamp();
+    }
+
+    private void refreshRecommendationTimestamp() {
+        if (llmLastUpdatedLabel != null && llmService != null) {
+            LlmRecommendation rec = llmService.getLatestRecommendation();
+            if (rec != null && rec.getSource() != LlmRecommendation.Source.PENDING) {
+                long secondsAgo = Duration.between(rec.getGeneratedAt(), Instant.now()).toSeconds();
+                String ago = secondsAgo <= 5 ? "just now"
+                        : secondsAgo < 60    ? secondsAgo + "s ago"
+                        : (secondsAgo / 60)  + "m ago";
+                String text = "Updated " + ago;
+                if (!text.equals(llmLastUpdatedLabel.getText())) {
+                    llmLastUpdatedLabel.setText(text);
+                }
+            }
         }
     }
 

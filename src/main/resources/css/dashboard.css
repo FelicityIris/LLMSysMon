@@ -369,6 +369,19 @@
     -fx-padding: 4px 0 0 0;
 }
 
+.llm-status-label {
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #A5D6A7;
+    -fx-padding: 4px 0 0 0;
+}
+
+.llm-updated-label {
+    -fx-font-size: 10px;
+    -fx-text-fill: #78909C;
+    -fx-font-style: italic;
+}
+
 /* ── Actual vs Predicted Chart Series Styling ───────────────────── */
 
 /* Predicted series (default-color1): visually distinct dashed lines */

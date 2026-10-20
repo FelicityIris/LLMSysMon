@@ -35,6 +35,8 @@ dependencies {
     implementation 'org.hibernate.orm:hibernate-core:7.4.7.Final'
     implementation 'org.hibernate.orm:hibernate-community-dialects:7.4.7.Final'
 
+    implementation 'com.google.code.gson:gson:2.10.1'
+
     testImplementation platform('org.junit:junit-bom:6.0.0')
     testImplementation 'org.junit.jupiter:junit-jupiter'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
